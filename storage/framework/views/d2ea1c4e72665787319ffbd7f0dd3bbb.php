@@ -361,11 +361,33 @@
 
             <!-- Products Grid -->
             <?php if($products->count() > 0): ?>
+            <?php if (isset($component)) { $__componentOriginala87666a6c7dfd023b4375fc379bf394c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala87666a6c7dfd023b4375fc379bf394c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.product-grid','data' => ['products' => $products->items()]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('product-grid'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['products' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($products->items())]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala87666a6c7dfd023b4375fc379bf394c)): ?>
+<?php $attributes = $__attributesOriginala87666a6c7dfd023b4375fc379bf394c; ?>
+<?php unset($__attributesOriginala87666a6c7dfd023b4375fc379bf394c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala87666a6c7dfd023b4375fc379bf394c)): ?>
+<?php $component = $__componentOriginala87666a6c7dfd023b4375fc379bf394c; ?>
+<?php unset($__componentOriginala87666a6c7dfd023b4375fc379bf394c); ?>
+<?php endif; ?>
+            
+            <?php /* Código comentado - agora usando componente
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <?php $__currentLoopData = $products; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                @foreach($products as $product)
                 <div class="relative group w-full sm:max-w-[300px] sm:mx-auto flex flex-col bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                      x-data="{
-                        product: <?php echo e(json_encode([
+                        product: {{ json_encode([
                             'id' => $product->id,
                             'name' => $product->name,
                             'slug' => $product->slug,
@@ -377,7 +399,7 @@
                             'is_featured' => (bool) $product->is_featured,
                             'auto_calculate_price' => (bool) $product->auto_calculate_price,
                             'discount_percentage' => $product->is_on_sale && $product->sale_price ? round((($product->price - $product->sale_price) / $product->price) * 100) : 0,
-                        ])); ?>,
+                        ]) }},
                         adding: false, 
                         inCart: false, 
                         removing: false,
@@ -400,7 +422,7 @@
                                         name: this.product.name,
                                         slug: this.product.slug,
                                         price: this.product.final_price,
-                                        image: this.product.featured_image || '<?php echo e(url('images/general/callback-image.svg')); ?>',
+                                        image: this.product.featured_image || '{{ url('images/general/callback-image.svg') }}',
                                         quantity: 1
                                     });
                                 }
@@ -434,40 +456,40 @@
                     
                     <!-- Product Image -->
                     <div class="relative w-full aspect-square mb-4 flex-shrink-0 overflow-hidden">
-                        <a href="<?php echo e(route('store.product', $product->slug)); ?>" class="block w-full h-full">
-                            <?php if($product->featured_image): ?>
-                                <img src="<?php echo e(url('images/' . $product->featured_image)); ?>" 
-                                     alt="<?php echo e($product->name); ?> - <?php echo e($product->category->name); ?> - Laser Link"
+                        <a href="{{ route('store.product', $product->slug) }}" class="block w-full h-full">
+                            @if($product->featured_image)
+                                <img src="{{ url('images/' . $product->featured_image) }}" 
+                                     alt="{{ $product->name }} - {{ $product->category->name }} - Laser Link"
                                      class="w-full h-full object-cover bg-white"
-                                     onerror="this.src='<?php echo e(url('images/general/callback-image.svg')); ?>'; this.classList.add('object-contain', 'bg-gray-100');">
-                            <?php else: ?>
-                                <img src="<?php echo e(url('images/general/callback-image.svg')); ?>" 
-                                     alt="<?php echo e($product->name); ?> - Produto Laser Link"
+                                     onerror="this.src='{{ url('images/general/callback-image.svg') }}'; this.classList.add('object-contain', 'bg-gray-100');">
+                            @else
+                                <img src="{{ url('images/general/callback-image.svg') }}" 
+                                     alt="{{ $product->name }} - Produto Laser Link"
                                      class="w-full h-full object-contain bg-gray-100">
-                            <?php endif; ?>
+                            @endif
                         </a>
                         
                         <!-- Badges -->
                         <div class="absolute left-3 top-3 flex flex-col gap-2 z-10">
-                            <?php if($product->is_new): ?>
+                            @if($product->is_new)
                             <span class="px-2 py-1 rounded-md bg-blue-500 text-white text-xs font-semibold uppercase shadow-md w-fit">Novo</span>
-                            <?php endif; ?>
+                            @endif
                             
-                            <?php if($product->is_on_sale && $product->sale_price && $product->price > $product->sale_price): ?>
+                            @if($product->is_on_sale && $product->sale_price && $product->price > $product->sale_price)
                             <span class="px-2 py-1 rounded-md bg-red-500 text-white text-xs font-semibold shadow-md w-fit">
-                                -<?php echo e(round((($product->price - $product->sale_price) / $product->price) * 100)); ?>%
+                                -{{ round((($product->price - $product->sale_price) / $product->price) * 100) }}%
                             </span>
-                            <?php endif; ?>
+                            @endif
                             
-                            <?php if($product->is_featured): ?>
+                            @if($product->is_featured)
                             <span class="px-2 py-1 rounded-md bg-amber-600 text-white text-xs font-semibold uppercase shadow-md w-fit">Destaque</span>
-                            <?php endif; ?>
+                            @endif
                         </div>
                         
                         <!-- Favorite Button -->
-                        <button @click="toggleFavorite(<?php echo e($product->id); ?>)" 
+                        <button @click="toggleFavorite({{ $product->id }})" 
                                 class="absolute right-3 top-3 w-10 h-10 rounded-md bg-white hover:bg-gray-50 flex items-center justify-center transition-all shadow-sm z-10">
-                            <i :class="isFavorite(<?php echo e($product->id); ?>) ? 'bi bi-heart-fill text-red-500' : 'bi bi-heart text-gray-700'" 
+                            <i :class="isFavorite({{ $product->id }}) ? 'bi bi-heart-fill text-red-500' : 'bi bi-heart text-gray-700'" 
                                class="text-xl transition-all duration-200"></i>
                         </button>
                     </div>
@@ -475,64 +497,45 @@
                     <!-- Product Info -->
                     <div class="flex flex-col flex-grow space-y-2 p-4 pt-0">
                         <!-- Title -->
-                        <a href="<?php echo e(route('store.product', $product->slug)); ?>" 
+                        <a href="{{ route('store.product', $product->slug) }}" 
                            class="text-base font-medium capitalize hover:underline line-clamp-2 flex items-start text-[#272343]">
-                            <?php echo e($product->name); ?>
-
+                            {{ $product->name }}
                         </a>
                         
                         <!-- Price and Rating -->
                         <div class="flex items-center justify-between gap-2 min-h-[2rem]">
                             <div class="flex items-center gap-2">
-                                <?php if($product->auto_calculate_price): ?>
+                                @if($product->auto_calculate_price)
                                     <p class="text-lg font-semibold text-green-600">
                                         <i class="bi bi-calculator mr-1"></i>
-                                        A partir de R$ <?php echo e(number_format($product->min_price ?? 0, 2, ',', '.')); ?>
-
+                                        A partir de R$ {{ number_format($product->min_price ?? 0, 2, ',', '.') }}
                                     </p>
-                                <?php elseif($product->sale_price && $product->sale_price > 0): ?>
+                                @elseif($product->sale_price && $product->sale_price > 0)
                                     <p class="text-lg font-semibold text-[#272343]">
-                                        R$ <?php echo e(number_format($product->sale_price, 2, ',', '.')); ?>
-
+                                        R$ {{ number_format($product->sale_price, 2, ',', '.') }}
                                     </p>
-                                    <?php if($product->price > $product->sale_price): ?>
+                                    @if($product->price > $product->sale_price)
                                     <p class="text-sm text-[#9a9caa] line-through">
-                                        R$ <?php echo e(number_format($product->price, 2, ',', '.')); ?>
-
+                                        R$ {{ number_format($product->price, 2, ',', '.') }}
                                     </p>
-                                    <?php endif; ?>
-                                <?php elseif($product->price && $product->price > 0): ?>
+                                    @endif
+                                @elseif($product->price && $product->price > 0)
                                     <p class="text-lg font-semibold text-[#272343]">
-                                        R$ <?php echo e(number_format($product->price, 2, ',', '.')); ?>
-
+                                        R$ {{ number_format($product->price, 2, ',', '.') }}
                                     </p>
-                                <?php else: ?>
+                                @else
                                     <p class="text-lg font-semibold text-gray-400">
                                         Preço sob consulta
                                     </p>
-                                <?php endif; ?>
+                                @endif
                             </div>
                             
-                            <?php if (isset($component)) { $__componentOriginal716f57506f031c4bc2c687c3d4a6b958 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal716f57506f031c4bc2c687c3d4a6b958 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.product-rating','data' => ['rating' => $product->rating_average ?? 0,'count' => $product->rating_count ?? 0,'showCount' => false,'size' => 'md']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('product-rating'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['rating' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->rating_average ?? 0),'count' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product->rating_count ?? 0),'showCount' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(false),'size' => 'md']); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal716f57506f031c4bc2c687c3d4a6b958)): ?>
-<?php $attributes = $__attributesOriginal716f57506f031c4bc2c687c3d4a6b958; ?>
-<?php unset($__attributesOriginal716f57506f031c4bc2c687c3d4a6b958); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal716f57506f031c4bc2c687c3d4a6b958)): ?>
-<?php $component = $__componentOriginal716f57506f031c4bc2c687c3d4a6b958; ?>
-<?php unset($__componentOriginal716f57506f031c4bc2c687c3d4a6b958); ?>
-<?php endif; ?>
+                            <x-product-rating 
+                                :rating="$product->rating_average ?? 0" 
+                                :count="$product->rating_count ?? 0"
+                                :showCount="false"
+                                size="md"
+                            />
                         </div>
                         
                         <!-- Add to Cart Button Full Width -->
@@ -575,8 +578,9 @@
                         </button>
                     </div>
                 </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                @endforeach
             </div>
+            */ ?>
 
             <!-- Pagination -->
             <div class="mt-8">

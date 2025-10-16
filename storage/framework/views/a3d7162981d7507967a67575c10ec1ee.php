@@ -77,7 +77,7 @@
                                     <div class="flex-1 min-w-0">
                                         <div class="text-sm font-medium text-gray-900 truncate" x-text="product.name"></div>
                                         <div class="text-xs text-gray-500" x-text="product.category?.name"></div>
-                                        <div class="text-sm font-bold text-primary" x-text="'R$ ' + product.price"></div>
+                                        <div class="text-sm font-bold text-primary" x-text="product.price_formatted"></div>
                                     </div>
                                 </a>
                             </template>
@@ -278,7 +278,7 @@
                                  onerror="this.src='<?php echo e(url('images/general/callback-image.svg')); ?>'">
                             <div class="flex-1 min-w-0">
                                 <div class="text-sm font-medium text-gray-900 truncate" x-text="product.name"></div>
-                                <div class="text-xs font-bold text-primary" x-text="'R$ ' + product.price"></div>
+                                <div class="text-xs font-bold text-primary" x-text="product.price_formatted"></div>
                             </div>
                         </a>
                     </template>

@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Acesso negado - 403 | ' . config('app.name')); ?>
 
 <?php $__env->startSection('meta_description', 'Você não tem permissão para acessar esta página.'); ?>

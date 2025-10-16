@@ -41,6 +41,7 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startPush('scripts'); ?>
+<script src="<?php echo e(asset('js/product-card.js')); ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const grid = document.getElementById('favorites-grid');
@@ -64,12 +65,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
     }
 
-    function removeFavorite(id) {
-        const favorites = getFavorites().filter(fav => fav.id !== id);
-        setFavorites(favorites);
-        render();
-    }
-
     function fetchProducts(favorites) {
         const ids = favorites.map(fav => fav.id).join(',');
         
@@ -83,110 +78,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(r => r.json())
             .then(data => data.products || [])
             .catch(() => []);
-    }
-
-    function productCard(p) {
-        const url = `<?php echo e(url('/produto')); ?>/${p.slug}`;
-        
-        return `
-        <div class="relative group w-full sm:max-w-[300px] sm:mx-auto flex flex-col">
-            <!-- Product Image -->
-            <div class="relative w-full aspect-square mb-4 flex-shrink-0 overflow-hidden rounded-md group">
-                <a href="${url}" class="block w-full h-full transition-transform duration-300 group-hover:scale-105">
-                    <img src="<?php echo e(url('storage')); ?>/${p.image_url}" 
-                     alt="${p.name} - Comunicação Visual Laser Link"
-                     class="w-full h-full object-cover bg-white transition-transform duration-300"
-                     onerror="this.src='<?php echo e(url('images/general/callback-image.svg')); ?>'; this.classList.remove('object-cover'); this.classList.add('object-contain', 'bg-gray-100');"
-                />
-                </a>
-                
-                <!-- Badges -->
-                <div class="absolute left-3 top-3 flex flex-col gap-2 z-10">
-                    ${p.is_new ? `
-                    <span class="px-2 py-1 rounded-md bg-blue-500 text-white text-xs font-semibold uppercase shadow-md w-fit">Novo</span>
-                    ` : ''}
-                    
-                    ${p.is_on_sale ? `
-                    <span class="px-2 py-1 rounded-md bg-red-500 text-white text-xs font-semibold shadow-md w-fit">
-                        -${p.discount_percentage}%
-                    </span>
-                    ` : ''}
-                    
-                    ${p.is_featured ? `
-                    <span class="px-2 py-1 rounded-md bg-amber-600 text-white text-xs font-semibold uppercase shadow-md w-fit">Destaque</span>
-                    ` : ''}
-                </div>
-                
-                <!-- Favorite Button (Remove) -->
-                <button data-remove="${p.id}" 
-                        class="absolute right-3 top-3 w-10 h-10 rounded-md bg-white hover:bg-red-50 flex items-center justify-center transition-all shadow-sm z-10"
-                        title="Remover dos favoritos">
-                    <i class="bi bi-heart-fill text-red-500 text-xl transition-all duration-200"></i>
-                </button>
-            </div>
-            
-            <!-- Product Info -->
-            <div class="flex flex-col flex-grow space-y-2">
-                <!-- Title -->
-                <a href="${url}" 
-                   class="text-base font-medium capitalize hover:underline line-clamp-2 flex items-start text-[#272343]">
-                    ${p.name}
-                </a>
-                
-                <!-- Price and Rating -->
-                <div class="flex items-center justify-between gap-2 min-h-[2rem]">
-                    <div class="flex items-center gap-2">
-                        ${p.auto_calculate_price ? `
-                            <p class="text-lg font-semibold text-green-600">
-                                <i class="bi bi-calculator mr-1"></i>
-                                A partir de R$ ${(p.min_price || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </p>
-                        ` : p.sale_price ? `
-                            <p class="text-lg font-semibold text-[#272343]">
-                                R$ ${p.sale_price.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </p>
-                            ${p.price > p.sale_price ? `
-                            <p class="text-sm text-[#9a9caa] line-through">
-                                R$ ${p.price.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </p>
-                            ` : ''}
-                        ` : p.price ? `
-                            <p class="text-lg font-semibold text-[#272343]">
-                                R$ ${p.price.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </p>
-                        ` : `
-                            <p class="text-lg font-semibold text-gray-400">
-                                Preço sob consulta
-                            </p>
-                        `}
-                    </div>
-                    
-                    <!-- Rating Stars -->
-                    <div class="flex items-center gap-0.5 text-base">
-                        ${[1, 2, 3, 4, 5].map(i => {
-                            const rating = p.rating_average || 0;
-                            const isHalf = i - 0.5 <= rating && i > Math.floor(rating);
-                            const isFull = i <= Math.floor(rating);
-                            const iconClass = isFull ? 'bi-star-fill' : (isHalf ? 'bi-star-half' : 'bi-star');
-                            return `<i class="bi ${iconClass} text-yellow-400"></i>`;
-                        }).join('')}
-                    </div>
-                </div>
-                
-                <!-- View Product Button -->
-                <a href="${url}" 
-                   class="w-full py-2 rounded-lg text-sm font-medium bg-gray-900 hover:bg-black text-white transition-colors duration-200 flex items-center justify-center gap-2 mt-auto">
-                    <i class="bi bi-eye text-base"></i>
-                    <span>Ver Produto</span>
-                </a>
-            </div>
-        </div>`;
-    }
-
-    function attachRemoveHandlers() {
-        grid.querySelectorAll('button[data-remove]').forEach(btn => {
-            btn.addEventListener('click', () => removeFavorite(parseInt(btn.getAttribute('data-remove'))));
-        });
     }
 
     function render() {
@@ -220,8 +111,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 emptyState.classList.remove('hidden');
                 clearBtn.classList.add('hidden');
             } else {
-                grid.innerHTML = ordered.map(productCard).join('');
-                attachRemoveHandlers();
+                // Usar componente ProductCard
+                grid.innerHTML = ordered.map(product => 
+                    window.ProductCard.render(product, {
+                        favoriteButtonType: 'remove',
+                        showAddToCart: false
+                    })
+                ).join('');
+                
+                // Anexar event listeners
+                window.ProductCard.attachEventListeners(grid);
             }
         }).catch(() => {
             loadingState.classList.add('hidden');

@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'Erro interno do servidor - 500 | ' . config('app.name')); ?>
 
 <?php $__env->startSection('meta_description', 'Ocorreu um erro interno no servidor. Nossa equipe foi notificada e está trabalhando para resolver o problema.'); ?>

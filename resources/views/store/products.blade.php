@@ -349,6 +349,9 @@
 
             <!-- Products Grid -->
             @if($products->count() > 0)
+            <x-product-grid :products="$products->items()" />
+            
+            @php /* Código comentado - agora usando componente
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 @foreach($products as $product)
                 <div class="relative group w-full sm:max-w-[300px] sm:mx-auto flex flex-col bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
@@ -546,6 +549,7 @@
                 </div>
                 @endforeach
             </div>
+            */ @endphp
 
             <!-- Pagination -->
             <div class="mt-8">

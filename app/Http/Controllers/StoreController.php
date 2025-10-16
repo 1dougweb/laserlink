@@ -910,10 +910,15 @@ class StoreController extends Controller
                     'slug' => $product->slug,
                     'price_formatted' => number_format((float) $product->price, 2, ',', '.'),
                     'price' => (float) $product->price,
+                    'sale_price' => $product->sale_price ? (float) $product->sale_price : null,
                     'image_url' => $product->featured_image 
-                        ? url($product->featured_image) 
+                        ? url('images/' . $product->featured_image) 
                         : url('images/general/callback-image.svg'),
                     'rating_average' => $product->rating_average ?? 0,
+                    'is_new' => (bool) $product->is_new,
+                    'is_on_sale' => (bool) $product->is_on_sale,
+                    'is_featured' => (bool) $product->is_featured,
+                    'discount_percentage' => $product->is_on_sale && $product->sale_price ? round((($product->price - $product->sale_price) / $product->price) * 100) : 0,
                 ];
             });
         
