@@ -1,0 +1,50 @@
+# Robots.txt para Laser Link
+# Atualizado: 2024
+
+User-agent: *
+
+# Permitir acesso público
+Allow: /
+Allow: /produtos
+Allow: /produto/
+Allow: /categoria/
+Allow: /blog
+Allow: /contato
+
+# Permitir páginas institucionais
+Allow: /sobre-nos
+Allow: /politica-de-privacidade
+Allow: /termos-de-uso
+Allow: /politica-de-troca-e-devolucao
+Allow: /politica-de-entrega
+Allow: /perguntas-frequentes
+
+# Bloquear área administrativa
+Disallow: /admin/
+Disallow: /admin/*
+
+# Bloquear páginas de autenticação
+Disallow: /login
+Disallow: /register
+Disallow: /password/
+Disallow: /dashboard
+
+# Bloquear arquivos e diretórios do sistema
+Disallow: /vendor/
+Disallow: /storage/
+Disallow: /.env
+Disallow: /composer.json
+Disallow: /composer.lock
+Disallow: /package.json
+
+# Bloquear páginas de carrinho e checkout (não indexar)
+Disallow: /carrinho
+Disallow: /checkout
+Disallow: /meus-pedidos
+
+# Sitemaps
+Sitemap: https://laserlink.com.br/sitemap.xml
+Sitemap: https://laserlink.com.br/blog-sitemap.xml
+
+# Tempo de crawl (opcional - evita sobrecarga)
+Crawl-delay: 1

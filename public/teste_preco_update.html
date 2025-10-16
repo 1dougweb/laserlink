@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Atualização de Preço</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .price-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e11d48;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #e11d48;
+        }
+        .field-container {
+            margin: 20px 0;
+        }
+        .field-container label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .field-container select, .field-container input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .debug-info {
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .debug-info h4 {
+            margin: 0 0 10px 0;
+            font-family: Arial, sans-serif;
+        }
+        .option-price {
+            color: #059669;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="priceTestPage()">
+        <h1>🧪 Teste de Atualização de Preço - Página do Produto</h1>
+        
+        <!-- Simulação da seção de preço igual ao template Blade -->
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-6 shadow-md">
+            <!-- Simulando a condição: auto_calculate_price = true -->
+            <div class="space-y-2">
+                <div class="flex items-baseline gap-3">
+                    <span class="price-display">R$ <span x-text="formatPrice(totalPrice)">0,00</span></span>
+                    <span class="text-gray-600">à vista</span>
+                </div>
+                <div x-show="extraCost > 0" class="text-sm text-green-600 font-medium">
+                    (+R$ <span x-text="formatPrice(extraCost)">0,00</span> extras)
+                </div>
+                <div class="text-sm text-gray-500">
+                    ⚙️ Preço calculado conforme personalização
+                </div>
+            </div>
+        </div>
+
+        <!-- Campos de teste -->
+        <div class="field-container">
+            <label for="material">Material (Select):</label>
+            <select id="material" x-model="selectedOptions.material" @change="calculateTotalPrice()">
+                <option value="">Selecione uma opção</option>
+                <option value="acrilico" data-price="0" data-price-type="fixed">Acrílico <span class="option-price">(Base)</span></option>
+                <option value="acrilico_premium" data-price="5.00" data-price-type="fixed">Acrílico Premium <span class="option-price">(+R$ 5,00)</span></option>
+                <option value="vidro" data-price="15.00" data-price-type="fixed">Vidro <span class="option-price">(+R$ 15,00)</span></option>
+            </select>
+        </div>
+
+        <div class="field-container">
+            <label>Acabamento (Radio):</label>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <label style="display: flex; align-items: center;">
+                    <input type="radio" name="acabamento" value="fosco" x-model="selectedOptions.acabamento" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Fosco <span class="option-price">(+R$ 2,00)</span>
+                </label>
+                <label style="display: flex; align-items: center;">
+                    <input type="radio" name="acabamento" value="brilhante" x-model="selectedOptions.acabamento" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Brilhante <span class="option-price">(Base)</span>
+                </label>
+                <label style="display: flex; align-items: center;">
+                    <input type="radio" name="acabamento" value="texturizado" x-model="selectedOptions.acabamento" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Texturizado <span class="option-price">(+20%)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="field-container">
+            <label>Extras (Checkbox):</label>
+            <div style="display: flex; gap: 15px; margin-top: 10px; flex-direction: column;">
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" value="gravacao" x-model="selectedOptions.extras" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Gravação Personalizada <span class="option-price">(+R$ 8,00)</span>
+                </label>
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" value="base_luxo" x-model="selectedOptions.extras" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Base de Luxo <span class="option-price">(+R$ 12,00)</span>
+                </label>
+                <label style="display: flex; align-items: center;">
+                    <input type="checkbox" value="embalagem_especial" x-model="selectedOptions.extras" @change="calculateTotalPrice()" style="width: auto; margin-right: 5px;">
+                    Embalagem Especial <span class="option-price">(+15%)</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="field-container">
+            <label>Quantidade:</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button @click="decreaseQuantity()" style="padding: 5px 10px; background: #ddd; border: none; border-radius: 3px;">-</button>
+                <span x-text="quantity" style="padding: 5px 15px; font-weight: bold; font-size: 18px;"></span>
+                <button @click="increaseQuantity()" style="padding: 5px 10px; background: #ddd; border: none; border-radius: 3px;">+</button>
+            </div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="debug-info">
+            <h4>🐛 Informações de Debug:</h4>
+            <div><strong>Base Price:</strong> R$ <span x-text="formatPrice(basePrice)"></span></div>
+            <div><strong>Extra Cost:</strong> R$ <span x-text="formatPrice(extraCost)"></span></div>
+            <div><strong>Quantity:</strong> <span x-text="quantity"></span></div>
+            <div><strong>Total Price:</strong> R$ <span x-text="formatPrice(totalPrice)"></span></div>
+            <div><strong>Selected Options:</strong> <pre x-text="JSON.stringify(selectedOptions, null, 2)"></pre></div>
+        </div>
+
+        <!-- Botão de teste -->
+        <button @click="testPriceUpdate()" style="padding: 12px 25px; background: #e11d48; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 20px;">
+            🧪 Testar Atualização Forçada
+        </button>
+    </div>
+
+    <script>
+        function priceTestPage() {
+            return {
+                // Dados iniciais
+                basePrice: 25.00,
+                extraCost: 0,
+                totalPrice: 25.00,
+                quantity: 1,
+                selectedOptions: {
+                    material: '',
+                    acabamento: '',
+                    extras: []
+                },
+
+                // Opções disponíveis com preços
+                options: {
+                    material: {
+                        'acrilico': { price: 0, price_type: 'fixed' },
+                        'acrilico_premium': { price: 5.00, price_type: 'fixed' },
+                        'vidro': { price: 15.00, price_type: 'fixed' }
+                    },
+                    acabamento: {
+                        'fosco': { price: 2.00, price_type: 'fixed' },
+                        'brilhante': { price: 0, price_type: 'fixed' },
+                        'texturizado': { price: 20, price_type: 'percentage' }
+                    },
+                    extras: {
+                        'gravacao': { price: 8.00, price_type: 'fixed' },
+                        'base_luxo': { price: 12.00, price_type: 'fixed' },
+                        'embalagem_especial': { price: 15, price_type: 'percentage' }
+                    }
+                },
+
+                init() {
+                    console.log('🎯 Teste de preço inicializado');
+                    this.calculateTotalPrice();
+                    
+                    // Observer para mudanças no totalPrice
+                    this.$watch('totalPrice', (newPrice, oldPrice) => {
+                        console.log('💰 Preço mudou:', { oldPrice, newPrice });
+                    });
+
+                    // Observer para mudanças no extraCost
+                    this.$watch('extraCost', (newCost, oldCost) => {
+                        console.log('📈 Custo extra mudou:', { oldCost, newCost });
+                    });
+                },
+
+                calculateTotalPrice() {
+                    let extraCost = 0;
+                    
+                    console.log('🔧 Calculando preço...', {
+                        basePrice: this.basePrice,
+                        quantity: this.quantity,
+                        selectedOptions: this.selectedOptions
+                    });
+                    
+                    // Material (select)
+                    if (this.selectedOptions.material && this.options.material[this.selectedOptions.material]) {
+                        const option = this.options.material[this.selectedOptions.material];
+                        if (option.price_type === 'percentage') {
+                            extraCost += (this.basePrice * option.price) / 100;
+                        } else {
+                            extraCost += option.price;
+                        }
+                        console.log('🎨 Material:', this.selectedOptions.material, '+', option.price);
+                    }
+                    
+                    // Acabamento (radio)
+                    if (this.selectedOptions.acabamento && this.options.acabamento[this.selectedOptions.acabamento]) {
+                        const option = this.options.acabamento[this.selectedOptions.acabamento];
+                        if (option.price_type === 'percentage') {
+                            extraCost += (this.basePrice * option.price) / 100;
+                        } else {
+                            extraCost += option.price;
+                        }
+                        console.log('✨ Acabamento:', this.selectedOptions.acabamento, '+', option.price);
+                    }
+                    
+                    // Extras (checkbox array)
+                    if (Array.isArray(this.selectedOptions.extras)) {
+                        this.selectedOptions.extras.forEach(extra => {
+                            if (this.options.extras[extra]) {
+                                const option = this.options.extras[extra];
+                                if (option.price_type === 'percentage') {
+                                    extraCost += (this.basePrice * option.price) / 100;
+                                } else {
+                                    extraCost += option.price;
+                                }
+                                console.log('🎁 Extra:', extra, '+', option.price);
+                            }
+                        });
+                    }
+                    
+                    this.extraCost = extraCost;
+                    this.totalPrice = (this.basePrice + extraCost) * this.quantity;
+                    
+                    console.log('✅ Preço final:', {
+                        basePrice: this.basePrice,
+                        extraCost: this.extraCost,
+                        quantity: this.quantity,
+                        totalPrice: this.totalPrice
+                    });
+                },
+
+                formatPrice(price) {
+                    const formatted = parseFloat(price || 0).toFixed(2).replace('.', ',');
+                    console.log('💵 formatPrice:', price, '->', formatted);
+                    return formatted;
+                },
+
+                increaseQuantity() {
+                    if (this.quantity < 99) {
+                        this.quantity++;
+                        this.calculateTotalPrice();
+                    }
+                },
+
+                decreaseQuantity() {
+                    if (this.quantity > 1) {
+                        this.quantity--;
+                        this.calculateTotalPrice();
+                    }
+                },
+
+                testPriceUpdate() {
+                    console.log('🧪 Teste de atualização forçada!');
+                    
+                    // Alterar valores manualmente
+                    this.basePrice = 50.00;
+                    this.extraCost = 10.00;
+                    this.totalPrice = 60.00;
+                    
+                    console.log('🔄 Valores alterados manualmente:', {
+                        basePrice: this.basePrice,
+                        extraCost: this.extraCost,
+                        totalPrice: this.totalPrice
+                    });
+
+                    // Forçar atualização do DOM via Alpine.js
+                    this.$nextTick(() => {
+                        console.log('🎯 nextTick executado, DOM deve estar atualizado');
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

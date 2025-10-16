@@ -1,0 +1,671 @@
+@extends('admin.layout')
+
+@section('title', 'Aparência - Laser Link')
+@section('page-title', 'Aparência')
+
+@section('content')
+<div class="space-y-6">
+    <!-- Success Message -->
+    @if(session('success'))
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+            <div class="flex items-center">
+                <i class="bi bi-check-circle mr-2"></i>
+                {{ session('success') }}
+            </div>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <i class="bi bi-exclamation-triangle mr-2"></i>
+            <ul>
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST" action="{{ route('admin.settings.appearance.update') }}" enctype="multipart/form-data" x-data="appearanceForm()" x-init="init()">
+        @csrf
+        @method('PUT')
+        
+        <!-- Campos hidden para URLs das imagens selecionadas -->
+        <input type="hidden" id="image_url" name="image_url" value="">
+        <input type="hidden" id="sidebar_image_url" name="sidebar_image_url" value="">
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center mb-6">
+                <i class="bi bi-image text-primary text-xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-gray-900">Logo e Aparência</h3>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <label for="logo" class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload da Logo
+                    </label>
+                    
+                    <!-- Opções de seleção -->
+                    <div class="mb-4 flex space-x-3">
+                        <button type="button" 
+                                onclick="openFileManager('main')"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="bi bi-folder mr-2"></i>Selecionar do Gerenciador
+                        </button>
+                        <button type="button" 
+                                onclick="document.getElementById('logo').click()"
+                                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="bi bi-upload mr-2"></i>Upload Novo
+                        </button>
+                    </div>
+                    
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                        <div class="space-y-1 text-center">
+                            <i class="bi bi-cloud-upload text-gray-400 text-4xl"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="logo" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-red-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
+                                    <span>Fazer upload</span>
+                                    <input type="file" 
+                                           id="logo" 
+                                           name="logo" 
+                                           accept="image/*"
+                                           class="sr-only"
+                                           @change="previewLogo($event)">
+                                </label>
+                                <p class="pl-1">ou arraste e solte</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG, JPG, GIF até 2MB</p>
+                        </div>
+                    </div>
+                    @error('logo')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+                
+                <div>
+                    <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                    <div class="border border-gray-200 rounded-lg p-4 py-8 bg-gray-500">
+                        <div x-show="!logoPreview" class="text-center text-gray-500">
+                            <i class="bi bi-image text-4xl mb-2"></i>
+                            <p>Nenhuma imagem selecionada</p>
+                        </div>
+                        <div x-show="logoPreview" class="text-center">
+                            <img :src="logoPreview" alt="Preview da logo" class="max-h-20 mx-auto">
+                        </div>
+                        @if(isset($settings['logo_path']) && $settings['logo_path'])
+                            <div class="mt-4 text-center">
+                                <p class="text-sm text-gray-600 mb-2">Logo Atual:</p>
+                                <img src="{{ asset('storage/' . $settings['logo_path']) }}" 
+                                     alt="Logo atual" 
+                                     class="max-h-16 mx-auto">
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logo do Sidebar do Cliente -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <div class="flex items-center mb-6">
+                    <i class="bi bi-layout-sidebar text-primary text-xl mr-3"></i>
+                    <h3 class="text-lg font-semibold text-gray-900">Logo do Sidebar do Cliente</h3>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <label for="sidebar_logo" class="block text-sm font-medium text-gray-700 mb-2">
+                            Upload da Logo do Sidebar
+                        </label>
+                        
+                        <!-- Opções de seleção -->
+                        <div class="mb-4 flex space-x-3">
+                            <button type="button" 
+                                    onclick="document.getElementById('sidebar_logo').click()"
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="bi bi-upload mr-2"></i>Upload Novo
+                            </button>
+                            <button type="button" 
+                                    onclick="openFileManager('sidebar')"
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="bi bi-folder mr-2"></i>Selecionar do Gerenciador
+                            </button>
+                        </div>
+                        
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                            <i class="bi bi-cloud-upload text-gray-400 text-4xl"></i>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="sidebar_logo" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-red-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
+                                    <span>Fazer upload</span>
+                                    <input type="file" 
+                                           id="sidebar_logo" 
+                                           name="sidebar_logo" 
+                                           accept="image/*"
+                                           class="sr-only"
+                                           @change="previewSidebarLogo($event)">
+                                </label>
+                            </div>
+                        </div>
+                        @error('sidebar_logo')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                        <div class="border border-gray-200 rounded-lg p-4 py-8 bg-gray-500">
+                            <div x-show="!sidebarLogoPreview" class="text-center text-gray-500">
+                                <i class="bi bi-image text-4xl mb-2"></i>
+                                <p>Nenhuma imagem selecionada</p>
+                            </div>
+                            <div x-show="sidebarLogoPreview" class="text-center">
+                                <img :src="sidebarLogoPreview" alt="Preview da logo do sidebar" class="max-h-20 mx-auto">
+                            </div>
+                            @if(isset($settings['sidebar_logo_path']) && $settings['sidebar_logo_path'])
+                                <div class="mt-4 text-center">
+                                    <p class="text-sm text-gray-600 mb-2">Logo Atual:</p>
+                                    <img src="{{ asset('storage/' . $settings['sidebar_logo_path']) }}" 
+                                         alt="Logo atual do sidebar" 
+                                         class="max-h-16 mx-auto">
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações de cores -->
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h4 class="text-md font-medium text-gray-900 mb-4">Cores do Site</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="primary_color" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cor Primária
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" 
+                                   id="primary_color" 
+                                   name="primary_color" 
+                                   value="{{ old('primary_color', $settings['primary_color'] ?? '#EE0000') }}"
+                                   class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer">
+                            <input type="text" 
+                                   value="{{ old('primary_color', $settings['primary_color'] ?? '#EE0000') }}"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                   readonly>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="secondary_color" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cor Secundária
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" 
+                                   id="secondary_color" 
+                                   name="secondary_color" 
+                                   value="{{ old('secondary_color', $settings['secondary_color'] ?? '#f8f9fa') }}"
+                                   class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer">
+                            <input type="text" 
+                                   value="{{ old('secondary_color', $settings['secondary_color'] ?? '#f8f9fa') }}"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                   readonly>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="accent_color" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cor de Destaque
+                        </label>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" 
+                                   id="accent_color" 
+                                   name="accent_color" 
+                                   value="{{ old('accent_color', $settings['accent_color'] ?? '#ffc107') }}"
+                                   class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer">
+                            <input type="text" 
+                                   value="{{ old('accent_color', $settings['accent_color'] ?? '#ffc107') }}"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                   readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botões -->
+        <div class="flex justify-end space-x-4 mt-4">
+            <a href="{{ route('admin.dashboard') }}" 
+               class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                <i class="bi bi-arrow-left mr-2"></i>Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-red-700 transition-colors"
+                    :disabled="loading">
+                <i class="bi bi-check-lg mr-2" x-show="!loading"></i>
+                <i class="bi bi-arrow-clockwise animate-spin mr-2" x-show="loading"></i>
+                <span x-text="loading ? 'Salvando...' : 'Salvar Configurações'"></span>
+            </button>
+        </div>
+        
+    </form>
+</div>
+
+<!-- File Manager Modal -->
+<div id="fileManagerModal" 
+     class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 hidden"
+     @click="closeFileManager()">
+    <div class="bg-white rounded-2xl shadow-2xl w-11/12 h-5/6 mx-4 flex flex-col max-w-6xl"
+         @click.stop>
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="bi bi-folder text-white text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">Selecionar Logo</h3>
+                    <p class="text-sm text-gray-600">Escolha uma imagem para usar como logo</p>
+                </div>
+            </div>
+            <button onclick="closeFileManager()" 
+                    class="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors">
+                <i class="bi bi-x text-gray-600 text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- File Manager Content -->
+        <div class="flex-1 p-6 overflow-hidden">
+            <!-- Loading -->
+            <div id="fileManagerLoading" class="flex items-center justify-center h-full">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+                        <i class="bi bi-arrow-clockwise animate-spin text-2xl text-blue-600"></i>
+                    </div>
+                    <p class="text-gray-600 font-medium">Carregando imagens...</p>
+                </div>
+            </div>
+            
+            <!-- File Grid -->
+            <div id="fileManagerGrid" class="hidden h-full overflow-y-auto">
+                <!-- Files will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="flex justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+            <button onclick="closeFileManager()"
+                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function appearanceForm() {
+    return {
+        loading: false,
+        logoPreview: null,
+        sidebarLogoPreview: null,
+
+        init() {
+            // Inicializar preview se houver logo atual
+            @if(isset($settings['logo_path']) && $settings['logo_path'])
+                this.logoPreview = '{{ asset("storage/" . $settings["logo_path"]) }}';
+            @else
+                this.logoPreview = null;
+            @endif
+            
+            // Inicializar preview se houver logo do sidebar atual
+            @if(isset($settings['sidebar_logo_path']) && $settings['sidebar_logo_path'])
+                this.sidebarLogoPreview = '{{ asset("storage/" . $settings["sidebar_logo_path"]) }}';
+            @else
+                this.sidebarLogoPreview = null;
+            @endif
+
+            // Sincronizar inputs de cor
+            this.syncColorInputs();
+            
+            // Carregar arquivos
+            this.loadFiles();
+        },
+
+        previewLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.logoPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        previewSidebarLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.sidebarLogoPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+
+        loadFiles() {
+            // Usar dados passados do PHP
+            const files = @json($files ?? []);
+            this.displayFiles(files);
+        },
+
+        displayFiles(items) {
+            const grid = document.getElementById('fileManagerGrid');
+            const loading = document.getElementById('fileManagerLoading');
+            
+            if (loading) loading.classList.add('hidden');
+            if (grid) grid.classList.remove('hidden');
+            
+            // Filtrar apenas imagens
+            const images = items.filter(item => 
+                item.type === 'file' && 
+                ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(item.extension?.toLowerCase())
+            );
+            
+            grid.innerHTML = images.map(item => `
+                <div class="relative group cursor-pointer rounded-xl p-4 transition-all duration-300 h-32 bg-gray-50 border-2 border-gray-200 hover:bg-gray-100 hover:border-gray-300 hover:shadow-lg"
+                     onclick="selectImage('${item.url}')">
+                    <div class="flex flex-col items-center justify-center h-full">
+                        <i class="bi bi-file-earmark-image text-4xl text-green-500 mb-2"></i>
+                        <p class="text-xs text-gray-700 text-center truncate w-full" title="${item.name}">
+                            ${item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name}
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+        },
+
+        syncColorInputs() {
+            // Sincronizar color picker com input de texto
+            document.querySelectorAll('input[type="color"]').forEach(colorInput => {
+                const textInput = colorInput.parentElement.nextElementSibling;
+                colorInput.addEventListener('input', () => {
+                    textInput.value = colorInput.value;
+                });
+            });
+        }
+    }
+}
+
+// Funções do modal
+function openFileManager(context = 'main') {
+    const modal = document.getElementById('fileManagerModal');
+    const loading = document.getElementById('fileManagerLoading');
+    const grid = document.getElementById('fileManagerGrid');
+    
+    // Definir contexto da seleção
+    window.currentImageSelector = context;
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    grid.classList.add('hidden');
+    
+    // Carregar arquivos
+    loadFilesInModal();
+}
+
+function closeFileManager() {
+    const modal = document.getElementById('fileManagerModal');
+    modal.classList.add('hidden');
+}
+
+function loadFilesInModal() {
+    // Usar dados passados do PHP
+    const files = @json($files ?? []);
+    
+    console.log('Files loaded:', files); // Debug
+    
+    setTimeout(() => {
+        displayFilesInModal(files);
+    }, 100); // Reduzir tempo de carregamento
+}
+
+function displayFilesInModal(files) {
+    const grid = document.getElementById('fileManagerGrid');
+    const loading = document.getElementById('fileManagerLoading');
+    
+    console.log('Displaying files:', files); // Debug
+    
+    if (loading) loading.classList.add('hidden');
+    if (grid) grid.classList.remove('hidden');
+    
+    // Verificar se o grid existe
+    if (!grid) {
+        console.error('Grid element not found');
+        return;
+    }
+    
+    // Verificar se há arquivos
+    if (!files || files.length === 0) {
+        grid.innerHTML = `
+            <div class="text-center py-12">
+                <i class="bi bi-folder-x text-6xl text-gray-400 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum arquivo encontrado</h3>
+                <p class="text-gray-500">Faça upload de algumas imagens para começar.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Filtrar apenas imagens
+    const images = files.filter(file => 
+        file.type === 'file' && 
+        file.extension && 
+        ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(file.extension.toLowerCase())
+    );
+    
+    console.log('Filtered images:', images); // Debug
+    
+    if (images.length === 0) {
+        grid.innerHTML = `
+            <div class="text-center py-12">
+                <i class="bi bi-image text-6xl text-gray-400 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhuma imagem encontrada</h3>
+                <p class="text-gray-500">Faça upload de imagens (JPG, PNG, GIF, SVG) para usar como logo.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Agrupar por pasta
+    const groupedFiles = images.reduce((groups, file) => {
+        const folder = file.folder || 'Raiz';
+        if (!groups[folder]) {
+            groups[folder] = [];
+        }
+        groups[folder].push(file);
+        return groups;
+    }, {});
+    
+    console.log('Grouped files:', groupedFiles); // Debug
+    
+    // Usar o próprio grid como container
+    grid.innerHTML = Object.keys(groupedFiles).map(folder => {
+        const folderFiles = groupedFiles[folder];
+        return `
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="bi bi-folder text-yellow-500 mr-2"></i>
+                    ${folder}
+                    <span class="ml-2 text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">${folderFiles.length}</span>
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    ${folderFiles.map(file => `
+                        <div class="relative group cursor-pointer rounded-xl p-4 transition-all duration-300 h-32 bg-gray-50 border-2 border-gray-200 hover:bg-gray-100 hover:border-gray-300 hover:shadow-lg"
+                             onclick="selectImageFromModal('${file.url}', '${file.name}')">
+                            <div class="text-center flex flex-col items-center justify-center h-full">
+                                <i class="text-4xl mb-3 ${getFileIcon(file.extension)}"></i>
+                                <p class="text-sm font-bold text-gray-900 truncate px-2" title="${file.name}">
+                                    ${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                                </p>
+                                <p class="text-xs text-gray-700 font-semibold truncate px-2">
+                                    ${file.extension ? file.extension.toUpperCase() : ''}
+                                </p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function selectImage(imageUrl) {
+    console.log('selectImage called with:', imageUrl);
+    
+    // Atualizar preview
+    const preview = document.querySelector('img[alt="Preview da logo"]');
+    if (preview) {
+        preview.src = imageUrl;
+        console.log('Preview updated');
+    } else {
+        console.log('Preview element not found');
+    }
+    
+    // Preencher campo de URL
+    const urlField = document.getElementById('image_url');
+    if (urlField) {
+        urlField.value = imageUrl;
+        console.log('URL field updated');
+    }
+    
+    // Atualizar Alpine.js data se disponível
+    if (window.Alpine) {
+        // Tentar encontrar o componente Alpine ativo
+        const alpineComponent = document.querySelector('[x-data*="appearanceForm"]');
+        if (alpineComponent && alpineComponent._x_dataStack) {
+            const alpineData = alpineComponent._x_dataStack[0];
+            if (alpineData && alpineData.logoPreview !== undefined) {
+                alpineData.logoPreview = imageUrl;
+            }
+        }
+    }
+}
+
+function selectSidebarImage(imageUrl) {
+    console.log('selectSidebarImage called with:', imageUrl);
+    
+    // Atualizar preview
+    const preview = document.querySelector('img[alt="Preview da logo do sidebar"]');
+    if (preview) {
+        preview.src = imageUrl;
+        console.log('Sidebar preview updated');
+    } else {
+        console.log('Sidebar preview element not found');
+    }
+    
+    // Preencher campo de URL
+    const urlField = document.getElementById('sidebar_image_url');
+    if (urlField) {
+        urlField.value = imageUrl;
+        console.log('Sidebar URL field updated');
+    }
+    
+    // Atualizar Alpine.js data se disponível
+    if (window.Alpine) {
+        // Tentar encontrar o componente Alpine ativo
+        const alpineComponent = document.querySelector('[x-data*="appearanceForm"]');
+        if (alpineComponent && alpineComponent._x_dataStack) {
+            const alpineData = alpineComponent._x_dataStack[0];
+            if (alpineData && alpineData.sidebarLogoPreview !== undefined) {
+                alpineData.sidebarLogoPreview = imageUrl;
+            }
+        }
+    }
+}
+
+
+function selectImageFromModal(imageUrl, fileName) {
+    console.log('selectImageFromModal called with:', { imageUrl, fileName });
+    
+    // Verificar qual tipo de seleção está ativo
+    const isSidebarSelection = window.currentImageSelector === 'sidebar';
+    
+    if (isSidebarSelection) {
+        // Seleção para logo do sidebar
+        selectSidebarImage(imageUrl);
+    } else {
+        // Seleção para logo principal
+        selectImage(imageUrl);
+    }
+    
+    // Fechar modal
+    closeFileManager();
+    
+    // Mostrar feedback
+    showNotification(`Imagem "${fileName}" selecionada!`, 'success');
+    
+    // Limpar seletor
+    window.currentImageSelector = null;
+}
+
+function getFileIcon(extension) {
+    const icons = {
+        'jpg': 'bi bi-file-earmark-image text-green-500',
+        'jpeg': 'bi bi-file-earmark-image text-green-500',
+        'png': 'bi bi-file-earmark-image text-green-500',
+        'gif': 'bi bi-file-earmark-image text-green-500',
+        'svg': 'bi bi-file-earmark-image text-green-500',
+        'webp': 'bi bi-file-earmark-image text-green-500',
+        'pdf': 'bi bi-file-earmark-pdf text-red-500',
+        'doc': 'bi bi-file-earmark-word text-blue-500',
+        'docx': 'bi bi-file-earmark-word text-blue-500',
+        'xls': 'bi bi-file-earmark-excel text-green-500',
+        'xlsx': 'bi bi-file-earmark-excel text-green-500',
+        'txt': 'bi bi-file-earmark-text text-gray-500',
+        'zip': 'bi bi-file-earmark-zip text-orange-500',
+        'rar': 'bi bi-file-earmark-zip text-orange-500',
+        'mp4': 'bi bi-file-earmark-play text-purple-500',
+        'avi': 'bi bi-file-earmark-play text-purple-500',
+        'mov': 'bi bi-file-earmark-play text-purple-500',
+        'mp3': 'bi bi-file-earmark-music text-pink-500',
+        'wav': 'bi bi-file-earmark-music text-pink-500',
+        'css': 'bi bi-file-earmark-code text-blue-500',
+        'js': 'bi bi-file-earmark-code text-yellow-500',
+        'html': 'bi bi-file-earmark-code text-orange-500',
+        'php': 'bi bi-file-earmark-code text-purple-500',
+        'json': 'bi bi-file-earmark-code text-yellow-500'
+    };
+    return icons[extension?.toLowerCase()] || 'bi bi-file-earmark text-gray-500';
+}
+
+function showNotification(message, type = 'info') {
+    // Criar notificação
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animar entrada
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Remover após 3 segundos
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+</script>
+@endsection
