@@ -158,26 +158,24 @@
                      class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
                      onclick="document.getElementById('{{ $modalId }}FileInput').click()">
                     <i class="bi bi-cloud-upload text-4xl text-gray-400 mb-4"></i>
-                    <p class="text-gray-600 mb-2">Clique ou arraste uma imagem aqui</p>
-                    <p class="text-sm text-gray-500">PNG, JPG, GIF até 10MB</p>
+                    <p class="text-gray-600 mb-2">Clique ou arraste imagens aqui</p>
+                    <p class="text-sm text-gray-500">PNG, JPG, GIF até 10MB cada • Upload múltiplo</p>
                     <input type="file" 
                            id="{{ $modalId }}FileInput" 
                            accept="image/*" 
+                           multiple
                            class="hidden"
                            onchange="handleFileSelect{{ $modalId }}(event)">
                 </div>
                 
                 <div id="{{ $modalId }}UploadPreview" class="hidden mt-4">
-                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                        <div class="flex items-center gap-3">
-                            <img id="{{ $modalId }}PreviewImage" src="" alt="Preview" class="w-12 h-12 object-cover rounded">
-                            <div>
-                                <p id="{{ $modalId }}FileName" class="text-sm font-medium text-gray-900"></p>
-                                <p id="{{ $modalId }}FileSize" class="text-xs text-gray-500"></p>
-                            </div>
-                        </div>
+                    <div id="{{ $modalId }}PreviewContainer" class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- Preview dos arquivos selecionados -->
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-sm">
+                        <span id="{{ $modalId }}TotalFiles" class="text-gray-600"></span>
                         <button onclick="clearFileSelection{{ $modalId }}()" class="text-red-500 hover:text-red-700">
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash mr-1"></i>Limpar tudo
                         </button>
                     </div>
                 </div>
@@ -245,6 +243,7 @@ let {{ $modalId }}CurrentDirectory = '';
 let {{ $modalId }}AllItems = [];
 let {{ $modalId }}SelectedFile = null;
 let {{ $modalId }}SelectedFiles = [];
+let {{ $modalId }}SelectedFilesToUpload = [];
 let {{ $modalId }}MultiSelectMode = false;
 
 // Abrir file manager (função será definida mais abaixo com funcionalidade de seleção múltipla)
@@ -460,6 +459,91 @@ function filterImages{{ $modalId }}(searchTerm) {
 // Upload Modal
 function openUploadModal{{ $modalId }}() {
     document.getElementById('{{ $modalId }}UploadModal').classList.remove('hidden');
+    
+    // Inicializar drag and drop
+    initializeDragAndDrop{{ $modalId }}();
+}
+
+function initializeDragAndDrop{{ $modalId }}() {
+    const uploadArea = document.getElementById('{{ $modalId }}UploadArea');
+    if (!uploadArea) {
+        console.warn('Upload area not found for {{ $modalId }}');
+        return;
+    }
+    
+    // Remover listeners existentes para evitar duplicação
+    uploadArea.removeEventListener('dragover', handleDragOver{{ $modalId }});
+    uploadArea.removeEventListener('dragleave', handleDragLeave{{ $modalId }});
+    uploadArea.removeEventListener('drop', handleDrop{{ $modalId }});
+    
+    // Adicionar novos listeners
+    uploadArea.addEventListener('dragover', handleDragOver{{ $modalId }});
+    uploadArea.addEventListener('dragleave', handleDragLeave{{ $modalId }});
+    uploadArea.addEventListener('drop', handleDrop{{ $modalId }});
+    
+    console.log('Drag and drop initialized for {{ $modalId }}');
+}
+
+function handleDragOver{{ $modalId }}(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('{{ $modalId }}UploadArea');
+    uploadArea.classList.add('border-green-500', 'bg-green-50');
+}
+
+function handleDragLeave{{ $modalId }}(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('{{ $modalId }}UploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+}
+
+function handleDrop{{ $modalId }}(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('{{ $modalId }}UploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        // Validar todos os arquivos
+        const validFiles = [];
+        let hasErrors = false;
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            // Verificar se é uma imagem
+            if (!file.type.startsWith('image/')) {
+                showNotification(`${file.name} não é uma imagem válida`, 'warning');
+                hasErrors = true;
+                continue;
+            }
+            
+            // Verificar tamanho (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showNotification(`${file.name} é muito grande. Máximo 10MB`, 'warning');
+                hasErrors = true;
+                continue;
+            }
+            
+            validFiles.push(file);
+        }
+        
+        if (validFiles.length > 0) {
+            // Simular seleção de arquivo
+            const fileInput = document.getElementById('{{ $modalId }}FileInput');
+            const dataTransfer = new DataTransfer();
+            validFiles.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+            
+            // Disparar evento de mudança
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        } else if (hasErrors) {
+            showNotification('Nenhum arquivo válido foi selecionado', 'error');
+        }
+    }
 }
 
 function closeUploadModal{{ $modalId }}() {
@@ -468,26 +552,70 @@ function closeUploadModal{{ $modalId }}() {
 }
 
 function handleFileSelect{{ $modalId }}(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
     
-    {{ $modalId }}SelectedFile = file;
+    {{ $modalId }}SelectedFilesToUpload = files;
     
-    // Mostrar preview
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        document.getElementById('{{ $modalId }}PreviewImage').src = e.target.result;
-        document.getElementById('{{ $modalId }}FileName').textContent = file.name;
-        document.getElementById('{{ $modalId }}FileSize').textContent = (file.size / 1024).toFixed(2) + ' KB';
-        document.getElementById('{{ $modalId }}UploadArea').classList.add('hidden');
-        document.getElementById('{{ $modalId }}UploadPreview').classList.remove('hidden');
-        document.getElementById('{{ $modalId }}UploadBtn').disabled = false;
-    };
-    reader.readAsDataURL(file);
+    // Mostrar preview de todos os arquivos
+    const previewContainer = document.getElementById('{{ $modalId }}PreviewContainer');
+    const totalFilesSpan = document.getElementById('{{ $modalId }}TotalFiles');
+    
+    previewContainer.innerHTML = '';
+    
+    let totalSize = 0;
+    files.forEach((file, index) => {
+        totalSize += file.size;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'flex items-center justify-between bg-gray-50 p-3 rounded-lg';
+            fileDiv.innerHTML = `
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <img src="${e.target.result}" alt="Preview" class="w-12 h-12 object-cover rounded flex-shrink-0">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-medium text-gray-900 truncate" title="${file.name}">${file.name}</p>
+                        <p class="text-xs text-gray-500">${(file.size / 1024).toFixed(2)} KB</p>
+                    </div>
+                </div>
+                <button onclick="removeFileFromUpload{{ $modalId }}(${index})" class="text-red-500 hover:text-red-700 flex-shrink-0 ml-2">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            previewContainer.appendChild(fileDiv);
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    totalFilesSpan.textContent = `${files.length} arquivo(s) • ${(totalSize / 1024).toFixed(2)} KB total`;
+    
+    document.getElementById('{{ $modalId }}UploadArea').classList.add('hidden');
+    document.getElementById('{{ $modalId }}UploadPreview').classList.remove('hidden');
+    document.getElementById('{{ $modalId }}UploadBtn').disabled = false;
+}
+
+function removeFileFromUpload{{ $modalId }}(index) {
+    {{ $modalId }}SelectedFilesToUpload.splice(index, 1);
+    
+    if ({{ $modalId }}SelectedFilesToUpload.length === 0) {
+        clearFileSelection{{ $modalId }}();
+    } else {
+        // Recriar o FileList
+        const fileInput = document.getElementById('{{ $modalId }}FileInput');
+        const dataTransfer = new DataTransfer();
+        {{ $modalId }}SelectedFilesToUpload.forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+        
+        // Disparar evento para atualizar preview
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
 }
 
 function clearFileSelection{{ $modalId }}() {
     {{ $modalId }}SelectedFile = null;
+    {{ $modalId }}SelectedFilesToUpload = [];
     document.getElementById('{{ $modalId }}FileInput').value = '';
     document.getElementById('{{ $modalId }}UploadArea').classList.remove('hidden');
     document.getElementById('{{ $modalId }}UploadPreview').classList.add('hidden');
@@ -495,11 +623,7 @@ function clearFileSelection{{ $modalId }}() {
 }
 
 async function uploadFile{{ $modalId }}() {
-    if (!{{ $modalId }}SelectedFile) return;
-    
-    const formData = new FormData();
-    formData.append('file', {{ $modalId }}SelectedFile);
-    formData.append('directory', {{ $modalId }}CurrentDirectory);
+    if ({{ $modalId }}SelectedFilesToUpload.length === 0) return;
     
     const uploadBtn = document.getElementById('{{ $modalId }}UploadBtn');
     const uploadBtnText = document.getElementById('{{ $modalId }}UploadBtnText');
@@ -507,29 +631,65 @@ async function uploadFile{{ $modalId }}() {
     const progressBar = document.getElementById('{{ $modalId }}ProgressBar');
     
     uploadBtn.disabled = true;
-    uploadBtnText.textContent = 'Enviando...';
     progressDiv.classList.remove('hidden');
     
+    const totalFiles = {{ $modalId }}SelectedFilesToUpload.length;
+    let uploadedFiles = 0;
+    let failedFiles = 0;
+    
     try {
-        const response = await fetch('{{ route("admin.admin.file-manager.upload") }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: formData
-        });
+        // Upload de cada arquivo sequencialmente
+        for (let i = 0; i < {{ $modalId }}SelectedFilesToUpload.length; i++) {
+            const file = {{ $modalId }}SelectedFilesToUpload[i];
+            
+            uploadBtnText.textContent = `Enviando ${i + 1}/${totalFiles}...`;
+            progressBar.style.width = `${((i) / totalFiles) * 100}%`;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('directory', {{ $modalId }}CurrentDirectory);
+            
+            try {
+                const response = await fetch('{{ route("admin.admin.file-manager.upload") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    uploadedFiles++;
+                } else {
+                    failedFiles++;
+                    console.error(`Erro ao fazer upload de ${file.name}:`, data.message);
+                }
+            } catch (error) {
+                failedFiles++;
+                console.error(`Erro ao fazer upload de ${file.name}:`, error);
+            }
+        }
         
-        const data = await response.json();
+        progressBar.style.width = '100%';
         
-        if (data.success) {
-            showNotification('Upload realizado com sucesso!', 'success');
+        // Exibir mensagem de conclusão
+        if (failedFiles === 0) {
+            showNotification(`${uploadedFiles} arquivo(s) enviado(s) com sucesso!`, 'success');
+        } else if (uploadedFiles > 0) {
+            showNotification(`${uploadedFiles} arquivo(s) enviado(s), ${failedFiles} falharam`, 'warning');
+        } else {
+            showNotification('Falha ao enviar os arquivos', 'error');
+        }
+        
+        // Fechar modal e recarregar diretório se ao menos um arquivo foi enviado
+        if (uploadedFiles > 0) {
             closeUploadModal{{ $modalId }}();
             loadCurrentDirectory{{ $modalId }}();
-        } else {
-            showNotification(data.message || 'Erro ao fazer upload', 'error');
         }
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Erro geral:', error);
         showNotification('Erro ao fazer upload', 'error');
     } finally {
         uploadBtn.disabled = false;

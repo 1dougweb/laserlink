@@ -151,6 +151,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin.only'])->grou
     Route::get('/produtos/{product}/editar', [AdminController::class, 'editProduct'])->name('products.edit')->middleware('permission:products.edit');
     Route::put('/produtos/{product}', [AdminController::class, 'updateProduct'])->name('products.update')->middleware('permission:products.edit');
     Route::patch('/produtos/{product}/toggle-status', [AdminController::class, 'toggleProductStatus'])->name('products.toggle-status')->middleware('permission:products.edit');
+    Route::post('/produtos/{product}/duplicar', [AdminController::class, 'duplicateProduct'])->name('products.duplicate')->middleware('permission:products.create');
+    Route::post('/produtos/excluir-multiplos', [AdminController::class, 'deleteMultipleProducts'])->name('products.delete-multiple')->middleware('permission:products.delete');
     Route::delete('/produtos/{product}', [AdminController::class, 'deleteProduct'])->name('products.delete')->middleware('permission:products.delete');
 
     // Estoque de Produtos

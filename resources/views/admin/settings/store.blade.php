@@ -609,6 +609,24 @@
                     </select>
                 </div>
             </div>
+            
+            <!-- Configuração do Prazo de Entrega -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <div class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="delivery_time_text" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="bi bi-truck text-green-600 mr-2"></i>Texto do Prazo de Entrega
+                        </label>
+                        <input type="text" 
+                               name="delivery_time_text" 
+                               id="delivery_time_text"
+                               value="{{ $settings['delivery_time_text'] ?? 'O prazo de entrega é de até 5 dias úteis' }}"
+                               placeholder="Ex: O prazo de entrega é de até 5 dias úteis"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <p class="text-xs text-gray-500 mt-1">Este texto será exibido na página do produto junto com o ícone de caminhão</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Preview do Menu -->

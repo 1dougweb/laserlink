@@ -28,6 +28,35 @@
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h1 class="text-2xl font-bold text-gray-900 mb-6">Carrinho de Compras</h1>
                 
+                <!-- Banner de Economia -->
+                <div x-show="cartItems.length > 0 && getTotalSavings() > 0" class="mb-6">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-piggy-bank text-2xl text-green-600"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-lg font-semibold text-green-800">
+                                        🎉 Parabéns! Você está economizando
+                                    </h3>
+                                    <p class="text-sm text-green-600">
+                                        Aproveite os descontos por quantidade nos seus produtos
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-3xl font-bold text-green-600">
+                                    R$ <span x-text="formatPrice(getTotalSavings())"></span>
+                                </div>
+                                <div class="text-sm text-green-500">
+                                    de economia total
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Carrinho Vazio -->
                 <div x-show="cartItems.length === 0" class="text-center py-12">
                     <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-6"></i>
@@ -66,10 +95,22 @@
                                 
                                 <!-- Preço -->
                                 <div class="mt-2">
-                                    <p class="text-lg font-bold text-primary" x-text="formatPrice(item.unit_price || item.price)"></p>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <p class="text-lg font-bold text-primary" x-text="formatPrice(item.unit_price || item.price)"></p>
+                                        <span x-show="item.quantity_discount_applied" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="bi bi-percent mr-1"></i>
+                                            Desconto
+                                        </span>
+                                    </div>
                                     <div x-show="item.extra_cost > 0" class="text-xs text-gray-500">
                                         Base: <span x-text="formatPrice(item.base_price)"></span> + 
                                         Extras: <span x-text="formatPrice(item.extra_cost)"></span>
+                                    </div>
+                                    <div x-show="item.quantity_discount_applied" class="flex items-center gap-2 mt-1">
+                                        <span class="inline-flex items-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-sm">
+                                            <i class="bi bi-piggy-bank mr-1"></i>
+                                            Você economizou R$ <span x-text="item.base_price && item.unit_price ? formatPrice((item.base_price - item.unit_price) * item.quantity) : '0,00'"></span>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -205,6 +246,17 @@ function cartApp() {
 
         calculateSubtotal() {
             this.subtotal = this.cartItems.reduce((total, item) => total + (item.total_price || item.price * item.quantity), 0);
+        },
+
+        getTotalSavings() {
+            return this.cartItems.reduce((total, item) => {
+                if (item.quantity_discount_applied && item.base_price && item.unit_price) {
+                    const savingsPerUnit = item.base_price - item.unit_price;
+                    const totalSavings = savingsPerUnit * item.quantity;
+                    return total + totalSavings;
+                }
+                return total;
+            }, 0);
         },
 
         formatPrice(price) {

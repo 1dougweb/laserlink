@@ -174,3 +174,90 @@
         </div>
     </div>
 </div>
+
+<script>
+// Inicializar drag and drop quando o modal for aberto
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDragAndDrop();
+});
+
+// Função para abrir o modal de upload (se não existir)
+if (typeof openUploadModal === 'undefined') {
+    function openUploadModal() {
+        const modal = document.getElementById('uploadModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Reinicializar drag and drop quando o modal for aberto
+            setTimeout(initializeDragAndDrop, 100);
+        }
+    }
+}
+
+function initializeDragAndDrop() {
+    const uploadArea = document.getElementById('uploadArea');
+    if (!uploadArea) {
+        console.warn('Upload area not found');
+        return;
+    }
+    
+    // Remover listeners existentes para evitar duplicação
+    uploadArea.removeEventListener('dragover', handleDragOver);
+    uploadArea.removeEventListener('dragleave', handleDragLeave);
+    uploadArea.removeEventListener('drop', handleDrop);
+    
+    // Adicionar novos listeners
+    uploadArea.addEventListener('dragover', handleDragOver);
+    uploadArea.addEventListener('dragleave', handleDragLeave);
+    uploadArea.addEventListener('drop', handleDrop);
+    
+    console.log('Drag and drop initialized for products upload modal');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.add('border-green-500', 'bg-green-50');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Verificar se é uma imagem
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor, selecione apenas arquivos de imagem');
+            return;
+        }
+        
+        // Verificar tamanho (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo 5MB');
+            return;
+        }
+        
+        // Simular seleção de arquivo
+        const fileInput = document.getElementById('imageFileInput');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        
+        // Disparar evento de mudança
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
+}
+</script>

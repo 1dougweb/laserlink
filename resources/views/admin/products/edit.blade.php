@@ -113,6 +113,114 @@
                     @enderror
                 </div>
                 
+                <!-- Desconto por Quantidade -->
+                <div class="md:col-span-2">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center mb-4">
+                            <i class="bi bi-percent text-green-600 text-lg mr-2"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Desconto por Quantidade</h3>
+                            <label class="ml-auto flex items-center">
+                                <input type="checkbox" 
+                                       name="quantity_discount_enabled" 
+                                       value="1"
+                                       x-model="quantityDiscountEnabled"
+                                       {{ old('quantity_discount_enabled', $product->quantity_discount_enabled) ? 'checked' : '' }}
+                                       class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-500 focus:ring focus:ring-green-500 focus:ring-opacity-50">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Ativar Desconto por Quantidade</span>
+                            </label>
+                        </div>
+                        
+                        <template x-if="quantityDiscountEnabled">
+                            <div class="space-y-4">
+                                <div class="bg-white rounded-lg p-4 border border-green-200">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-3">Regras de Desconto</h4>
+                                    <div class="space-y-3">
+                                        <template x-for="(rule, index) in quantityDiscountRules" :key="index">
+                                            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                                                <div class="flex-1">
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">Quantidade Mínima</label>
+                                                    <input type="number" 
+                                                           x-model="rule.min_quantity"
+                                                           min="1"
+                                                           class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500">
+                                                </div>
+                                                <div class="flex-1">
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">Desconto (%)</label>
+                                                    <input type="number" 
+                                                           x-model="rule.discount_percentage"
+                                                           min="1"
+                                                           max="100"
+                                                           class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500">
+                                                </div>
+                                                <div class="flex-1">
+                                                    <label class="block text-xs font-medium text-gray-600 mb-1">Preço Final</label>
+                                                    <div class="px-2 py-1 text-sm bg-gray-100 rounded text-gray-700" x-text="calculateQuantityDiscountPrice(rule)"></div>
+                                                </div>
+                                                <button type="button" 
+                                                        @click="removeQuantityDiscountRule(index)"
+                                                        class="px-2 py-1 text-red-600 hover:text-red-800 text-sm">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        
+                                        <button type="button" 
+                                                @click="addQuantityDiscountRule()"
+                                                class="w-full px-3 py-2 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition-colors">
+                                            <i class="bi bi-plus mr-1"></i>Adicionar Regra
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Campo hidden para enviar as regras -->
+                                    <input type="hidden" name="quantity_discount_rules" x-model="JSON.stringify(quantityDiscountRules)">
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- WhatsApp Quote Option -->
+                <div class="md:col-span-2">
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center mb-4">
+                            <i class="bi bi-whatsapp text-green-600 text-lg mr-2"></i>
+                            <h3 class="text-lg font-semibold text-gray-900">Opção de Cotação WhatsApp</h3>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <!-- Enable WhatsApp Quote -->
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="whatsapp_quote_enabled" 
+                                       name="whatsapp_quote_enabled" 
+                                       value="1"
+                                       {{ old('whatsapp_quote_enabled', $product->whatsapp_quote_enabled) ? 'checked' : '' }}
+                                       class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-500 focus:ring focus:ring-green-500 focus:ring-opacity-50">
+                                <label for="whatsapp_quote_enabled" class="ml-2 text-sm font-medium text-gray-700">
+                                    Substituir botão "Adicionar ao Carrinho" por "Cotar pelo WhatsApp"
+                                </label>
+                            </div>
+                            
+                            <!-- WhatsApp Quote Text -->
+                            <div>
+                                <label for="whatsapp_quote_text" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Texto personalizado para o botão
+                                </label>
+                                <input type="text" 
+                                        value="Cotar pelo WhatsApp"
+                                        id="whatsapp_quote_text" 
+                                        name="whatsapp_quote_text" 
+                                        value="{{ old('whatsapp_quote_text', $product->whatsapp_quote_text) }}"
+                                        placeholder="Ex: Cotar pelo WhatsApp"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Deixe em branco para usar o texto padrão "Cotar pelo WhatsApp"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div>
                     <label for="stock_quantity" class="block text-sm font-medium text-gray-700 mb-2">
                         Estoque
@@ -2077,6 +2185,77 @@ function openUploadModal() {
     const modal = document.getElementById('uploadModal');
     modal.classList.remove('hidden');
     resetUploadModal();
+    
+    // Reinicializar drag and drop quando o modal for aberto
+    setTimeout(initializeUploadDragAndDrop, 100);
+}
+
+function initializeUploadDragAndDrop() {
+    const uploadArea = document.getElementById('uploadArea');
+    if (!uploadArea) {
+        console.warn('Upload area not found');
+        return;
+    }
+    
+    // Remover listeners existentes para evitar duplicação
+    uploadArea.removeEventListener('dragover', handleUploadDragOver);
+    uploadArea.removeEventListener('dragleave', handleUploadDragLeave);
+    uploadArea.removeEventListener('drop', handleUploadDrop);
+    
+    // Adicionar novos listeners
+    uploadArea.addEventListener('dragover', handleUploadDragOver);
+    uploadArea.addEventListener('dragleave', handleUploadDragLeave);
+    uploadArea.addEventListener('drop', handleUploadDrop);
+    
+    console.log('Upload drag and drop initialized');
+}
+
+function handleUploadDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.add('border-green-500', 'bg-green-50');
+}
+
+function handleUploadDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+}
+
+function handleUploadDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.classList.remove('border-green-500', 'bg-green-50');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // Verificar se é uma imagem
+        if (!file.type.startsWith('image/')) {
+            alert('Por favor, selecione apenas arquivos de imagem');
+            return;
+        }
+        
+        // Verificar tamanho (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo 5MB');
+            return;
+        }
+        
+        // Simular seleção de arquivo
+        const fileInput = document.getElementById('imageFileInput');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+        
+        // Disparar evento de mudança
+        const event = new Event('change', { bubbles: true });
+        fileInput.dispatchEvent(event);
+    }
 }
 
 function closeUploadModal() {
@@ -2297,6 +2476,25 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('❌ Alpine.js não está disponível');
     }
+});
+
+// Carregar regras de desconto por quantidade existentes
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityDiscountRules = @json($product->quantity_discount_rules ?? []);
+    const quantityDiscountEnabled = {{ $product->quantity_discount_enabled ? 'true' : 'false' }};
+    
+    // Aguardar Alpine.js estar pronto
+    setTimeout(() => {
+        const productManager = Alpine.$data(document.querySelector('[x-data*="productManager()"]'));
+        if (productManager) {
+            productManager.quantityDiscountEnabled = quantityDiscountEnabled;
+            
+            // Carregar regras existentes
+            if (quantityDiscountRules.length > 0) {
+                productManager.quantityDiscountRules = quantityDiscountRules;
+            }
+        }
+    }, 100);
 });
 </script>
 

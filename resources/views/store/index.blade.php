@@ -709,23 +709,32 @@
                             </div>
                         </div>
                         
-                        <!-- Add to Cart Button Full Width -->
-                        <button @click="handleCartClick(product.id)"
-                                @mouseenter="if(inCart) removing = true"
-                                @mouseleave="removing = false"
-                                x-init="window.addEventListener('cartUpdated', () => {
-                                    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                                    inCart = cart.some(item => item.id === product.id);
-                                })"
-                                class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
-                                :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
-                            <!-- Static state - Adicionar -->
-                            <template x-if="!adding && !inCart">
-                                <div class="flex items-center gap-2">
-                                    <i class="bi bi-cart-plus text-base"></i>
-                                    <span>Adicionar ao Carrinho</span>
-                                </div>
-                            </template>
+                        <!-- Add to Cart Button Full Width or WhatsApp Quote Button -->
+                        <template x-if="product.whatsapp_quote_enabled">
+                            <a :href="`https://wa.me/{{ preg_replace('/[^0-9]/', '', \App\Models\Setting::get('whatsapp_number', '5511999999999')) }}?text=${encodeURIComponent('Olá! Gostaria de solicitar uma cotação para o produto: ' + product.name + ' - ' + window.location.origin + '/produto/' + product.slug)}`"
+                               target="_blank"
+                               class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto bg-green-500 hover:bg-green-600 text-white">
+                                <i class="bi bi-whatsapp text-base"></i>
+                                <span x-text="product.whatsapp_quote_text || 'Cotar pelo WhatsApp'"></span>
+                            </a>
+                        </template>
+                        <template x-if="!product.whatsapp_quote_enabled">
+                            <button @click="handleCartClick(product.id)"
+                                    @mouseenter="if(inCart) removing = true"
+                                    @mouseleave="removing = false"
+                                    x-init="window.addEventListener('cartUpdated', () => {
+                                        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                                        inCart = cart.some(item => item.id === product.id);
+                                    })"
+                                    class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
+                                    :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
+                                <!-- Static state - Adicionar -->
+                                <template x-if="!adding && !inCart">
+                                    <div class="flex items-center gap-2">
+                                        <i class="bi bi-cart-plus text-base"></i>
+                                        <span>Adicionar ao Carrinho</span>
+                                    </div>
+                                </template>
                             
                             <!-- Loading before adding -->
                             <template x-if="adding">
@@ -750,7 +759,8 @@
                                     <span>Remover do Carrinho</span>
                                 </div>
                             </template>
-                        </button>
+                            </button>
+                        </template>
                     </div>
                 </div>
                 </template>
@@ -902,19 +912,28 @@
                                 </p>
                             </div>
                             
-                            <!-- Add to Cart Button -->
-                            <button @click="handleCartClick()"
-                                    @mouseenter="if(inCart) removing = true"
-                                    @mouseleave="removing = false"
-                                    class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
-                                    :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
-                                <!-- Static state - Adicionar -->
-                                <template x-if="!adding && !inCart">
-                                    <div class="flex items-center gap-2">
-                                        <i class="bi bi-cart-plus text-base"></i>
-                                        <span>Adicionar ao Carrinho</span>
-                                    </div>
-                                </template>
+                            <!-- Add to Cart Button or WhatsApp Quote Button -->
+                            <template x-if="product.whatsapp_quote_enabled">
+                                <a :href="`https://wa.me/{{ preg_replace('/[^0-9]/', '', \App\Models\Setting::get('whatsapp_number', '5511999999999')) }}?text=${encodeURIComponent('Olá! Gostaria de solicitar uma cotação para o produto: ' + product.name + ' - ' + window.location.origin + '/produto/' + product.slug)}`"
+                                   target="_blank"
+                                   class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto bg-green-500 hover:bg-green-600 text-white">
+                                    <i class="bi bi-whatsapp text-base"></i>
+                                    <span x-text="product.whatsapp_quote_text || 'Cotar pelo WhatsApp'"></span>
+                                </a>
+                            </template>
+                            <template x-if="!product.whatsapp_quote_enabled">
+                                <button @click="handleCartClick()"
+                                        @mouseenter="if(inCart) removing = true"
+                                        @mouseleave="removing = false"
+                                        class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
+                                        :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
+                                    <!-- Static state - Adicionar -->
+                                    <template x-if="!adding && !inCart">
+                                        <div class="flex items-center gap-2">
+                                            <i class="bi bi-cart-plus text-base"></i>
+                                            <span>Adicionar ao Carrinho</span>
+                                        </div>
+                                    </template>
                                 
                                 <!-- Loading before adding -->
                                 <template x-if="adding">
@@ -939,7 +958,8 @@
                                         <span>Remover do Carrinho</span>
                                     </div>
                                 </template>
-                            </button>
+                                </button>
+                            </template>
                         </div>
                     </div>
                 </template>
@@ -989,7 +1009,9 @@
                     slug: product.slug,
                     price: product.price,
                     image: product.image,
-                    viewed_at: new Date().toISOString()
+                    viewed_at: new Date().toISOString(),
+                    whatsapp_quote_enabled: product.whatsapp_quote_enabled || false,
+                    whatsapp_quote_text: product.whatsapp_quote_text || null
                 });
                 
                 // Limitar ao máximo de produtos

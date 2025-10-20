@@ -65,6 +65,8 @@ class StoreController extends Controller
                     'min_price' => $product->min_price ? (float) $product->min_price : null,
                     'stock_quantity' => $product->stock_quantity ?? 0,
                     'rating_average' => $product->rating_average ?? 0,
+                    'whatsapp_quote_enabled' => (bool) $product->whatsapp_quote_enabled,
+                    'whatsapp_quote_text' => $product->whatsapp_quote_text,
                     'created_at' => $product->created_at->toIso8601String(),
                 ];
             });

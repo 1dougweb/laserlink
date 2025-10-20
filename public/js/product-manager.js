@@ -66,12 +66,19 @@ function productManager() {
             slug: ''
         },
         
+        // Desconto por Quantidade
+        quantityDiscountEnabled: false,
+        quantityDiscountRules: [],
+        
         init() {
             // Inicializar drag and drop para galeria
             this.initializeDragAndDrop();
             
             // Inicializar dados SEO
             this.initializeSeoData();
+            
+            // Inicializar regras de desconto por quantidade
+            this.initializeQuantityDiscount();
             
             // Observar mudanças no featuredImagePath
             this.$watch('featuredImagePath', (value) => {
@@ -81,6 +88,16 @@ function productManager() {
             // Observar mudanças no featuredImage
             this.$watch('featuredImage', (value) => {
                 console.log('🔄 featuredImage changed to:', value);
+            });
+            
+            // Observar mudanças no quantityDiscountEnabled
+            this.$watch('quantityDiscountEnabled', (value) => {
+                console.log('🔄 quantityDiscountEnabled changed to:', value);
+                
+                // Se ativou e não há regras, adicionar uma
+                if (value && this.quantityDiscountRules.length === 0) {
+                    this.addQuantityDiscountRule();
+                }
             });
             
             // Log de inicialização (apenas em desenvolvimento)
@@ -564,6 +581,54 @@ function productManager() {
                 .replace(/\s+/g, '-')
                 .replace(/-+/g, '-')
                 .trim('-');
+        },
+        
+        // Desconto por Quantidade
+        initializeQuantityDiscount() {
+            // Adicionar uma regra inicial se não houver nenhuma
+            if (this.quantityDiscountRules.length === 0) {
+                this.addQuantityDiscountRule();
+            }
+            
+            // Debug para verificar estado
+            console.log('🔧 Quantity Discount initialized:', {
+                enabled: this.quantityDiscountEnabled,
+                rules: this.quantityDiscountRules.length
+            });
+        },
+        
+        toggleQuantityDiscount() {
+            // Este método não é mais necessário, mas mantido para compatibilidade
+            console.log('🔄 toggleQuantityDiscount called (deprecated)');
+        },
+        
+        addQuantityDiscountRule() {
+            this.quantityDiscountRules.push({
+                min_quantity: 1,
+                discount_percentage: 0
+            });
+        },
+        
+        removeQuantityDiscountRule(index) {
+            if (this.quantityDiscountRules.length > 1) {
+                this.quantityDiscountRules.splice(index, 1);
+            }
+        },
+        
+        calculateQuantityDiscountPrice(rule) {
+            const basePrice = parseFloat(document.getElementById('price')?.value?.replace(/[^\d,]/g, '').replace(',', '.') || 0);
+            const salePrice = parseFloat(document.getElementById('sale_price')?.value?.replace(/[^\d,]/g, '').replace(',', '.') || 0);
+            const price = salePrice > 0 ? salePrice : basePrice;
+            
+            if (price === 0) return 'R$ 0,00';
+            
+            const discountAmount = price * (rule.discount_percentage / 100);
+            const finalPrice = price - discountAmount;
+            
+            return 'R$ ' + finalPrice.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         }
     }
 }

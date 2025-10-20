@@ -182,14 +182,48 @@
             @endif
         </div>
 
-        <!-- Desktop/Tablet: Tabela com Scroll Horizontal -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <!-- Container de seleção múltipla -->
+        <div x-data="bulkActions">
+            <!-- Barra de ações para seleção múltipla -->
+            <div x-show="selectedCount > 0" x-cloak 
+                 class="bg-red-200 bg-opacity-10 border border-primary rounded-lg p-4 mb-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-gray-900">
+                        <span x-text="selectedCount"></span> produto(s) selecionado(s)
+                    </span>
+                    <button @click="clearSelection" 
+                            class="text-sm text-gray-600 hover:text-gray-900 underline">
+                        Desmarcar todos
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    @can('products.delete')
+                    <button @click="deleteSelected" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center space-x-2">
+                        <i class="bi bi-trash"></i>
+                        <span>Excluir Selecionados</span>
+                    </button>
+                    @endcan
+                </div>
+            </div>
+
+            <!-- Desktop/Tablet: Tabela com Scroll Horizontal -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
             <!-- Wrapper com scroll horizontal -->
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            @can('products.delete')
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                                <input type="checkbox" 
+                                       @change="toggleAll($event.target.checked)"
+                                       :checked="allSelected"
+                                       class="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer">
+                            </th>
+                            @endcan
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-10"
+                                :class="{'sticky left-0': {{ auth()->user()->cannot('products.delete') ? 'true' : 'false' }}}">
                                 Produto
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -211,8 +245,19 @@
                     </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($products as $product)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10 hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors" 
+                            :class="{'bg-blue-50': selectedIds.includes({{ $product->id }})}">
+                            @can('products.delete')
+                            <td class="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10 transition-colors"
+                                :class="{'bg-blue-50': selectedIds.includes({{ $product->id }})}">
+                                <input type="checkbox" 
+                                       :checked="selectedIds.includes({{ $product->id }})"
+                                       @change="toggleProduct({{ $product->id }})"
+                                       class="rounded border-gray-300 text-primary focus:ring-primary cursor-pointer">
+                            </td>
+                            @endcan
+                            <td class="px-6 py-4 whitespace-nowrap bg-white z-10 transition-colors"
+                                :class="{'sticky left-0': {{ auth()->user()->cannot('products.delete') ? 'true' : 'false' }}, 'bg-blue-50': selectedIds.includes({{ $product->id }})}">
                                 <div class="flex items-center min-w-[250px]">
                                     @if($product->first_image)
                                         <img class="h-10 w-10 rounded-lg object-cover mr-4 flex-shrink-0" 
@@ -258,7 +303,8 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sticky right-0 bg-white z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)]">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium sticky right-0 bg-white z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] transition-colors"
+                                :class="{'bg-blue-50': selectedIds.includes({{ $product->id }})}">
                                 <div class="flex items-center space-x-2 justify-end">
                                     <a href="{{ route('admin.products.show', $product) }}" 
                                        class="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50 transition-all" 
@@ -270,6 +316,16 @@
                                        title="Editar">
                                         <i class="bi bi-pencil text-lg"></i>
                                     </a>
+                                    @can('products.create')
+                                    <form method="POST" action="{{ route('admin.products.duplicate', $product) }}" class="inline">
+                                        @csrf
+                                        <button type="submit" 
+                                                class="text-purple-600 hover:text-purple-900 p-2 rounded hover:bg-purple-50 transition-all" 
+                                                title="Duplicar produto">
+                                            <i class="bi bi-files text-lg"></i>
+                                        </button>
+                                    </form>
+                                    @endcan
                                     <form method="POST" action="{{ route('admin.products.toggle-status', $product) }}" class="inline">
                                         @csrf
                                         @method('PATCH')
@@ -307,9 +363,11 @@
             </div>
         </div>
 
-        <div class="mt-4">
-            {{ $products->links() }}
+            <div class="mt-4">
+                {{ $products->links() }}
+            </div>
         </div>
+        <!-- Fim do container de seleção múltipla -->
     @else
         <div class="text-center py-12">
             <div class="text-gray-500 text-lg mb-4">Nenhum produto encontrado</div>
@@ -322,6 +380,11 @@
 </div>
 
 <style>
+/* Esconder elementos antes do Alpine.js carregar */
+[x-cloak] { 
+    display: none !important; 
+}
+
 /* Scroll horizontal suave */
 .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
@@ -363,6 +426,86 @@ tr:hover .sticky {
 </style>
 
 <script>
+// Alpine.js - Gerenciamento de seleção múltipla
+document.addEventListener('alpine:init', () => {
+    Alpine.data('bulkActions', () => ({
+        selectedIds: [],
+        
+        get selectedCount() {
+            return this.selectedIds.length;
+        },
+        
+        get allSelected() {
+            const totalProducts = {{ $products->count() }};
+            return totalProducts > 0 && this.selectedIds.length === totalProducts;
+        },
+        
+        toggleProduct(productId) {
+            const index = this.selectedIds.indexOf(productId);
+            if (index === -1) {
+                this.selectedIds.push(productId);
+            } else {
+                this.selectedIds.splice(index, 1);
+            }
+        },
+        
+        toggleAll(checked) {
+            if (checked) {
+                // Selecionar todos os produtos visíveis na página
+                this.selectedIds = [
+                    @foreach($products as $product)
+                        {{ $product->id }},
+                    @endforeach
+                ];
+            } else {
+                this.clearSelection();
+            }
+        },
+        
+        clearSelection() {
+            this.selectedIds = [];
+        },
+        
+        deleteSelected() {
+            if (this.selectedIds.length === 0) {
+                alert('Nenhum produto selecionado.');
+                return;
+            }
+            
+            const count = this.selectedIds.length;
+            const message = count === 1 
+                ? 'Tem certeza que deseja excluir 1 produto selecionado?' 
+                : `Tem certeza que deseja excluir ${count} produtos selecionados?`;
+            
+            if (confirm(message)) {
+                // Criar formulário e enviar
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("admin.products.delete-multiple") }}';
+                
+                // CSRF Token
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = '_token';
+                csrfInput.value = '{{ csrf_token() }}';
+                form.appendChild(csrfInput);
+                
+                // Adicionar IDs dos produtos
+                this.selectedIds.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'product_ids[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    }));
+});
+
 // Função robusta para formatar moeda brasileira (R$ 1.234,56)
 function formatCurrencyBRL(value) {
     if (typeof value === 'number') value = value.toString();

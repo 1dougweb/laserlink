@@ -349,9 +349,6 @@
 
             <!-- Products Grid -->
             @if($products->count() > 0)
-            <x-product-grid :products="$products->items()" />
-            
-            @php /* Código comentado - agora usando componente
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 @foreach($products as $product)
                 <div class="relative group w-full sm:max-w-[300px] sm:mx-auto flex flex-col bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
@@ -368,6 +365,8 @@
                             'is_featured' => (bool) $product->is_featured,
                             'auto_calculate_price' => (bool) $product->auto_calculate_price,
                             'discount_percentage' => $product->is_on_sale && $product->sale_price ? round((($product->price - $product->sale_price) / $product->price) * 100) : 0,
+                            'whatsapp_quote_enabled' => (bool) $product->whatsapp_quote_enabled,
+                            'whatsapp_quote_text' => $product->whatsapp_quote_text,
                         ]) }},
                         adding: false, 
                         inCart: false, 
@@ -507,19 +506,28 @@
                             />
                         </div>
                         
-                        <!-- Add to Cart Button Full Width -->
-                        <button @click="handleCartClick()"
-                                @mouseenter="if(inCart) removing = true"
-                                @mouseleave="removing = false"
-                                class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
-                                :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
-                            <!-- Static state - Adicionar -->
-                            <template x-if="!adding && !inCart">
-                                <div class="flex items-center gap-2">
-                                    <i class="bi bi-cart-plus text-base"></i>
-                                    <span>Adicionar ao Carrinho</span>
-                                </div>
-                            </template>
+                        <!-- Add to Cart Button Full Width or WhatsApp Quote Button -->
+                        <template x-if="product.whatsapp_quote_enabled">
+                            <a :href="`https://wa.me/{{ preg_replace('/[^0-9]/', '', \App\Models\Setting::get('whatsapp_number', '5511999999999')) }}?text=${encodeURIComponent('Olá! Gostaria de solicitar uma cotação para o produto: ' + product.name + ' - ' + window.location.origin + '/produto/' + product.slug)}`"
+                               target="_blank"
+                               class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto bg-green-500 hover:bg-green-600 text-white">
+                                <i class="bi bi-whatsapp text-base"></i>
+                                <span x-text="product.whatsapp_quote_text || 'Cotar pelo WhatsApp'"></span>
+                            </a>
+                        </template>
+                        <template x-if="!product.whatsapp_quote_enabled">
+                            <button @click="handleCartClick()"
+                                    @mouseenter="if(inCart) removing = true"
+                                    @mouseleave="removing = false"
+                                    class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
+                                    :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
+                                <!-- Static state - Adicionar -->
+                                <template x-if="!adding && !inCart">
+                                    <div class="flex items-center gap-2">
+                                        <i class="bi bi-cart-plus text-base"></i>
+                                        <span>Adicionar ao Carrinho</span>
+                                    </div>
+                                </template>
                             
                             <!-- Loading before adding -->
                             <template x-if="adding">
@@ -544,12 +552,12 @@
                                     <span>Remover do Carrinho</span>
                                 </div>
                             </template>
-                        </button>
+                            </button>
+                        </template>
                     </div>
                 </div>
                 @endforeach
             </div>
-            */ @endphp
 
             <!-- Pagination -->
             <div class="mt-8">

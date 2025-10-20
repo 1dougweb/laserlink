@@ -27,6 +27,10 @@ class Product extends Model
         'meta_keywords',
         'price',
         'sale_price',
+        'quantity_discount_enabled',
+        'quantity_discount_rules',
+        'whatsapp_quote_enabled',
+        'whatsapp_quote_text',
         'auto_calculate_price',
         'min_price',
         'max_price',
@@ -52,10 +56,13 @@ class Product extends Model
         'gallery_images' => 'array',
         'attributes' => 'array',
         'custom_attributes' => 'array',
+        'quantity_discount_rules' => 'array',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'track_stock' => 'boolean',
         'auto_calculate_price' => 'boolean',
+        'quantity_discount_enabled' => 'boolean',
+        'whatsapp_quote_enabled' => 'boolean',
         'sort_order' => 'integer',
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
@@ -389,5 +396,41 @@ class Product extends Model
         }
         
         return $this->stock_quantity > 0 && $this->stock_quantity <= $this->stock_min;
+    }
+
+    /**
+     * Calcular preço com desconto por quantidade
+     */
+    public function calculateQuantityDiscountPrice(int $quantity): float
+    {
+        if (!$this->quantity_discount_enabled || !$this->quantity_discount_rules) {
+            return $this->final_price;
+        }
+
+        $rules = $this->quantity_discount_rules;
+        $basePrice = $this->sale_price && $this->sale_price > 0 ? $this->sale_price : $this->price;
+        
+        // Ordenar regras por quantidade mínima (decrescente)
+        usort($rules, function($a, $b) {
+            return $b['min_quantity'] <=> $a['min_quantity'];
+        });
+
+        // Encontrar a regra aplicável
+        foreach ($rules as $rule) {
+            if ($quantity >= $rule['min_quantity']) {
+                $discountAmount = $basePrice * ($rule['discount_percentage'] / 100);
+                return $basePrice - $discountAmount;
+            }
+        }
+
+        return $basePrice;
+    }
+
+    /**
+     * Obter regras de desconto por quantidade
+     */
+    public function getQuantityDiscountRules(): array
+    {
+        return $this->quantity_discount_rules ?? [];
     }
 }

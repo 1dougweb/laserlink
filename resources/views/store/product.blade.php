@@ -447,10 +447,43 @@
                             </div>
                         @endif
 
+                        <!-- Desconto por Quantidade - Exibição Dinâmica -->
+                        @if($product->quantity_discount_enabled && $product->quantity_discount_rules && count($product->quantity_discount_rules) > 0)
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <!-- Preço com desconto aplicado -->
+                                <div x-show="quantityDiscountPrice > 0" class="space-y-2">
+                                    <div class="flex items-baseline gap-3">
+                                        <span class="text-3xl font-bold text-green-600" x-text="'R$ ' + formatPrice(quantityDiscountPrice)"></span>
+                                        <span class="text-lg text-gray-500 line-through" x-text="'R$ ' + formatPrice(quantityDiscountOriginalPrice)"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="inline-flex items-center bg-green-100 text-green-800 px-3 py-1.5 rounded-full text-sm font-medium">
+                                            <i class="bi bi-percent mr-1"></i>
+                                            <span x-text="quantityDiscountPercentage + '% de desconto'"></span>
+                                        </span>
+                                        <span class="inline-flex items-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
+                                            <i class="bi bi-piggy-bank mr-1"></i>
+                                            Economia de R$ <span x-text="formatPrice(quantityDiscountSavings)" class="mr-1"></span> nessa quantidade
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        <i class="bi bi-info-circle mr-1"></i>
+                                        Desconto aplicado para <span x-text="quantity"></span> unidades
+                                    </div>
+                                </div>
+                                
+                                <!-- Informação sobre regras disponíveis -->
+                                <div x-show="quantityDiscountPrice === 0" class="text-sm text-gray-600">
+                                    <i class="bi bi-percent mr-1"></i>
+                                    Desconto por quantidade disponível
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="mt-4 pt-4 border-t border-gray-200">
                             <p class="text-sm text-gray-600">
                             <i class="bi bi-truck text-green-600"></i>
-                                O prazo de entrega é de até <span class="font-semibold">5 dias úteis</span>
+                                {!! \App\Models\Setting::get('delivery_time_text', 'O prazo de entrega é de até <span class="font-semibold">5 dias úteis</span>') !!}
                             </p>
             </div>
             
@@ -733,15 +766,20 @@
                     <div class="flex gap-3 items-center">
                         <!-- Quantity Selector -->
                         <div class="flex items-center bg-gray-100 border border-gray-200 rounded-lg overflow-hidden bg-white p-1 shadow-b-md">
-                            <!-- Display da quantidade à esquerda -->
-                            <div class="w-12 h-10 flex items-center justify-center bg-gray-100 rounded-md mx-1">
-                                <span x-text="quantity" class="text-lg font-semibold text-gray-800"></span>
+                            <!-- Input de quantidade editável à esquerda -->
+                            <div class="w-16 h-10 flex items-center justify-center mx-1">
+                                <input type="number" 
+                                       x-model.number="quantity"
+                                       @input="handleQuantityInput($event)"
+                                       min="1" 
+                                       max="999"
+                                       class="w-full h-full text-center text-lg font-semibold text-gray-800 bg-gray-100 rounded-md border-0 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             </div>
                             
                             <!-- Botões +/- empilhados à direita -->
                             <div class="flex flex-col gap-1">
                                 <button @click="increaseQuantity()" 
-                                        :disabled="quantity >= 99"
+                                        :disabled="quantity >= 999"
                                         class="px-3 py-1.5 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors rounded-md shadow-b-sm">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -757,20 +795,41 @@
                             </div>
                         </div>
                         
-                        <!-- Add to Cart Button -->
-                        <button @click="submitCustomization()" 
-                                @mouseenter="if(inCart) removing = true"
-                                @mouseleave="removing = false"
-                                class="flex-1 px-6 py-3.5 rounded-xl transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-                                :class="inCart && !removing ? 'bg-green-500 hover:bg-green-600 text-white' : inCart && removing ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-primary hover:bg-red-700 text-white'">
+                        <!-- Add to Cart Button or WhatsApp Quote Button -->
+                        @if($product->whatsapp_quote_enabled)
+                            <!-- WhatsApp Quote Button -->
+                            <a :href="generateWhatsAppLink()" 
+                               target="_blank"
+                               class="flex-1 px-6 py-3.5 rounded-xl transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white">
+                                <i class="bi bi-whatsapp text-2xl"></i>
+                                <span>{{ $product->whatsapp_quote_text ?: 'Cotar pelo WhatsApp' }}</span>
+                            </a>
+                        @else
+                            <!-- Add to Cart Button -->
+                            <button @click="submitCustomization()" 
+                                    @mouseenter="if(inCart) removing = true"
+                                    @mouseleave="removing = false"
+                                    :disabled="totalPrice <= 0"
+                                    class="flex-1 px-6 py-3.5 rounded-xl transition-all duration-300 font-semibold text-lg shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                                    :class="totalPrice <= 0 ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : inCart && !removing ? 'bg-green-500 hover:bg-green-600 text-white' : inCart && removing ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-primary hover:bg-red-700 text-white'">
                             
                             <!-- Static state - Adicionar -->
-                            <template x-if="!adding && !inCart">
+                            <template x-if="!adding && !inCart && totalPrice > 0">
                                 <div class="flex items-center gap-2">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                     </svg>
                                     <span>Adicionar ao Carrinho</span>
+                                </div>
+                            </template>
+                            
+                            <!-- Disabled state - Valor zero -->
+                            <template x-if="!adding && !inCart && totalPrice <= 0">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                    </svg>
+                                    <span>Valor inválido</span>
                                 </div>
                             </template>
                             
@@ -803,7 +862,8 @@
                                     <span>Remover do Carrinho</span>
                                 </div>
                             </template>
-                        </button>
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -880,7 +940,7 @@
                             </svg>
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">Entrega Rápida</h3>
-                        <p class="text-gray-600 text-sm">Produção e envio em até 5 dias úteis</p>
+                        <p class="text-gray-600 text-sm">{!! \App\Models\Setting::get('delivery_time_text', 'Produção e envio em até 5 dias úteis') !!}</p>
                     </div>
                     
                     <div class="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow text-center">
@@ -1066,17 +1126,36 @@
                             />
                         </div>
                         
-                        <!-- Add to Cart Button Full Width -->
-                        <button @click="handleCartClick()"
-                                @mouseenter="if(inCart) removing = true"
-                                @mouseleave="removing = false"
-                                class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
-                                :class="inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
+                        <!-- Add to Cart Button Full Width or WhatsApp Quote Button -->
+                        @if($product->whatsapp_quote_enabled)
+                            <!-- WhatsApp Quote Button Full Width -->
+                            <a :href="generateWhatsAppLink()" 
+                               target="_blank"
+                               class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto bg-green-500 hover:bg-green-600 text-white">
+                                <i class="bi bi-whatsapp text-base"></i>
+                                <span>{{ $product->whatsapp_quote_text ?: 'Cotar pelo WhatsApp' }}</span>
+                            </a>
+                        @else
+                            <!-- Add to Cart Button Full Width -->
+                            <button @click="handleCartClick()"
+                                    @mouseenter="if(inCart) removing = true"
+                                    @mouseleave="removing = false"
+                                    :disabled="totalPrice <= 0"
+                                    class="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 mt-auto"
+                                    :class="totalPrice <= 0 ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : inCart && !removing ? 'bg-green-500 text-white transition-colors duration-200' : inCart && removing ? 'bg-red-500 text-white transition-colors duration-200' : 'bg-gray-900 hover:bg-black text-white transition-colors duration-200'">
                             <!-- Static state - Adicionar -->
-                            <template x-if="!adding && !inCart">
+                            <template x-if="!adding && !inCart && totalPrice > 0">
                                 <div class="flex items-center gap-2">
                                     <i class="bi bi-cart-plus text-base"></i>
                                     <span>Adicionar ao Carrinho</span>
+                                </div>
+                            </template>
+                            
+                            <!-- Disabled state - Valor zero -->
+                            <template x-if="!adding && !inCart && totalPrice <= 0">
+                                <div class="flex items-center gap-2">
+                                    <i class="bi bi-exclamation-triangle text-base"></i>
+                                    <span>Valor inválido</span>
                                 </div>
                             </template>
                             
@@ -1103,7 +1182,8 @@
                                     <span>Remover do Carrinho</span>
                                 </div>
                             </template>
-                        </button>
+                            </button>
+                        @endif
                     </div>
                 </div>
                 @endforeach
@@ -1167,6 +1247,12 @@ function productPage() {
         extraCost: 0,
         totalPrice: {{ $product->auto_calculate_price ? ($product->min_price ?? 0) : ($product->final_price ?? 0) }},
         
+        // Quantity Discount
+        quantityDiscountPrice: 0,
+        quantityDiscountOriginalPrice: {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }},
+        quantityDiscountPercentage: 0,
+        quantityDiscountSavings: 0,
+        
         init() {
             // Initialize customization fields and selectedOptions
             @if($extraFields && $extraFields->count() > 0)
@@ -1190,6 +1276,9 @@ function productPage() {
             
             // Update pricing on init
             this.updatePricing();
+            
+            // Calculate initial quantity discount
+            this.calculateQuantityDiscount();
             
             // Watch for changes in selectedOptions
             this.$watch('selectedOptions', () => {
@@ -1386,11 +1475,13 @@ function productPage() {
                 if (this.quantity < {{ $product->stock_quantity }} && this.quantity < 99) {
                     this.quantity++;
                     this.calculateTotalPrice();
+                    this.calculateQuantityDiscount();
                 }
             @else
                 if (this.quantity < 99) {
                     this.quantity++;
                     this.calculateTotalPrice();
+                    this.calculateQuantityDiscount();
                 }
             @endif
         },
@@ -1399,7 +1490,149 @@ function productPage() {
             if (this.quantity > 1) {
                 this.quantity--;
                 this.calculateTotalPrice();
+                this.calculateQuantityDiscount();
             }
+        },
+        
+        handleQuantityInput(event) {
+            let value = parseInt(event.target.value);
+            
+            // Validar se é um número válido
+            if (isNaN(value) || value < 1) {
+                this.quantity = 1;
+            } 
+            @if($product->track_stock && $product->stock_quantity > 0)
+                else if (value > {{ $product->stock_quantity }}) {
+                    this.quantity = {{ $product->stock_quantity }};
+                }
+            @else
+                else if (value > 999) {
+                    this.quantity = 999;
+                }
+            @endif
+            else {
+                this.quantity = value;
+            }
+            
+            // Recalcular preços
+            this.calculateTotalPrice();
+            this.calculateQuantityDiscount();
+        },
+        
+        generateWhatsAppLink() {
+            const whatsappNumber = '{{ preg_replace('/[^0-9]/', '', \App\Models\Setting::get('whatsapp_number', '5511999999999')) }}';
+            const productName = '{{ addslashes($product->name) }}';
+            const productUrl = '{{ url()->current() }}';
+            
+            // Construir mensagem
+            let message = `🛒 *Solicitação de Cotação*\n\n`;
+            message += `- *Produto:* ${productName}\n`;
+            message += `- *Quantidade:* ${this.quantity} unidade(s)\n`;
+            
+            // Adicionar preço se disponível
+            if (this.totalPrice > 0) {
+                message += `- *Valor Total:* R$ ${this.formatPrice(this.totalPrice)}\n`;
+            }
+            
+            // Adicionar desconto se aplicado
+            if (this.quantityDiscountPrice > 0 && this.quantityDiscountSavings > 0) {
+                message += `- *Desconto Aplicado:* ${this.quantityDiscountPercentage}%\n`;
+                message += `- *Economia:* R$ ${this.formatPrice(this.quantityDiscountSavings * this.quantity)}\n`;
+            }
+            
+            // Adicionar personalizações/customizações
+            const customizations = [];
+            @foreach($product->extraFields as $field)
+                if (this.customization['{{ $field->id }}']) {
+                    const fieldName = '{{ addslashes($field->name) }}';
+                    const fieldValue = this.customization['{{ $field->id }}'];
+                    
+                    @if($field->type === 'select' || $field->type === 'radio')
+                        // Para select/radio, buscar o label da opção
+                        const options = @json($field->options);
+                        const selectedOption = options.find(opt => opt.value == fieldValue);
+                        if (selectedOption) {
+                            customizations.push(`  • ${fieldName}: ${selectedOption.label}`);
+                        }
+                    @elseif($field->type === 'checkbox')
+                        customizations.push(`  • ${fieldName}: ${fieldValue ? 'Sim' : 'Não'}`);
+                    @else
+                        customizations.push(`  • ${fieldName}: ${fieldValue}`);
+                    @endif
+                }
+            @endforeach
+            
+            if (customizations.length > 0) {
+                message += `\n📝 *Personalizações:*\n${customizations.join('\n')}\n`;
+            }
+            
+            message += `\n🔗 *Link do Produto:* ${productUrl}\n`;
+            message += `\n_Aguardo retorno para confirmar disponibilidade e prazo de entrega._`;
+            
+            return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+        },
+        
+        calculateQuantityDiscount() {
+            @if($product->quantity_discount_enabled && $product->quantity_discount_rules && count($product->quantity_discount_rules) > 0)
+                const quantityDiscountRules = @json($product->quantity_discount_rules);
+                const basePrice = {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }};
+                
+                console.log('💰 Calculando desconto para quantidade:', this.quantity);
+                console.log('📋 Regras de desconto:', quantityDiscountRules);
+                
+                // Ordenar regras por quantidade mínima (decrescente)
+                quantityDiscountRules.sort((a, b) => b.min_quantity - a.min_quantity);
+                
+                // Encontrar a regra aplicável
+                for (const rule of quantityDiscountRules) {
+                    if (this.quantity >= rule.min_quantity) {
+                        const discountAmount = basePrice * (rule.discount_percentage / 100);
+                        this.quantityDiscountPrice = basePrice - discountAmount;
+                        this.quantityDiscountPercentage = rule.discount_percentage;
+                        this.quantityDiscountSavings = discountAmount;
+                        console.log('✅ Desconto aplicado:', {
+                            quantidade: this.quantity,
+                            regra: rule,
+                            precoOriginal: basePrice,
+                            precoComDesconto: this.quantityDiscountPrice,
+                            economia: this.quantityDiscountSavings
+                        });
+                        return;
+                    }
+                }
+                
+                // Nenhuma regra aplicável
+                this.quantityDiscountPrice = 0;
+                this.quantityDiscountPercentage = 0;
+                this.quantityDiscountSavings = 0;
+                console.log('❌ Nenhuma regra aplicável para quantidade:', this.quantity);
+            @endif
+        },
+        
+        calculateQuantityDiscount() {
+            @if($product->quantity_discount_enabled && $product->quantity_discount_rules && count($product->quantity_discount_rules) > 0)
+                const quantityDiscountRules = @json($product->quantity_discount_rules);
+                const basePrice = {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }};
+                
+                // Ordenar regras por quantidade mínima (decrescente)
+                quantityDiscountRules.sort((a, b) => b.min_quantity - a.min_quantity);
+                
+                // Encontrar a regra aplicável
+                for (const rule of quantityDiscountRules) {
+                    if (this.quantity >= rule.min_quantity) {
+                        const discountAmount = basePrice * (rule.discount_percentage / 100);
+                        this.quantityDiscountPrice = basePrice - discountAmount;
+                        this.quantityDiscountPercentage = rule.discount_percentage;
+                        this.quantityDiscountSavings = discountAmount;
+                        return;
+                    }
+                }
+                
+                // Nenhuma regra aplicável
+                this.quantityDiscountPrice = 0;
+                this.quantityDiscountPercentage = 0;
+                this.quantityDiscountSavings = 0;
+            @endif
         },
         
         calculateTotalPrice() {
@@ -1512,6 +1745,12 @@ function productPage() {
         },
         
         async submitCustomization() {
+            // Verificar se o valor é válido
+            if (this.totalPrice <= 0) {
+                alert('Valor inválido! Verifique as opções selecionadas.');
+                return;
+            }
+            
             // Se já está no carrinho e está removendo, remover
             if (this.inCart && this.removing) {
                 this.removing = false;
@@ -1560,7 +1799,26 @@ function productPage() {
             
             // Add customized product to cart
             // Calcular preço unitário (sem multiplicar pela quantidade)
-            const unitPrice = this.basePrice + this.extraCost;
+            let unitPrice = this.basePrice + this.extraCost;
+            
+            // Aplicar desconto por quantidade se disponível
+            @if($product->quantity_discount_enabled && $product->quantity_discount_rules && count($product->quantity_discount_rules) > 0)
+                const quantityDiscountRules = @json($product->quantity_discount_rules);
+                const basePrice = {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }};
+                
+                // Ordenar regras por quantidade mínima (decrescente)
+                quantityDiscountRules.sort((a, b) => b.min_quantity - a.min_quantity);
+                
+                // Encontrar a regra aplicável
+                for (const rule of quantityDiscountRules) {
+                    if (this.quantity >= rule.min_quantity) {
+                        const discountAmount = basePrice * (rule.discount_percentage / 100);
+                        const discountedBasePrice = basePrice - discountAmount;
+                        unitPrice = discountedBasePrice + this.extraCost;
+                        break;
+                    }
+                }
+            @endif
             
             const cartData = {
                 product_id: {{ $product->id }},
@@ -1569,7 +1827,8 @@ function productPage() {
                 extra_cost: this.extraCost,
                 unit_price: unitPrice,
                 total_price: unitPrice * this.quantity,
-                base_price: this.basePrice
+                base_price: this.basePrice,
+                quantity_discount_applied: @if($product->quantity_discount_enabled) true @else false @endif
             };
 
             try {
@@ -1730,6 +1989,92 @@ function productPage() {
             }
             
             localStorage.setItem('recentlyViewed', JSON.stringify(recentProducts));
+        }
+    }
+}
+
+function quantityDiscountDisplay() {
+    return {
+        discountedPrice: 0,
+        originalPrice: {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }},
+        discountPercentage: 0,
+        savings: 0,
+        quantity: 1,
+        
+        init() {
+            // Calcular desconto inicial
+            this.calculateDiscount(1);
+            
+            // Verificar mudanças na quantidade usando setInterval
+            let lastQuantity = 1;
+            setInterval(() => {
+                const quantityElement = document.querySelector('[x-text="quantity"]');
+                if (quantityElement) {
+                    const currentQuantity = parseInt(quantityElement.textContent) || 1;
+                    if (currentQuantity !== lastQuantity) {
+                        console.log('🔍 Quantidade detectada via setInterval:', currentQuantity);
+                        this.calculateDiscount(currentQuantity);
+                        lastQuantity = currentQuantity;
+                    }
+                }
+            }, 500); // Verificar a cada 500ms
+            
+            console.log('👂 Monitor de quantidade iniciado');
+        },
+        
+        calculateDiscount(quantity) {
+            console.log('💰 Calculando desconto para quantidade:', quantity);
+            @if($product->quantity_discount_enabled && $product->quantity_discount_rules && count($product->quantity_discount_rules) > 0)
+                const quantityDiscountRules = @json($product->quantity_discount_rules);
+                const basePrice = {{ $product->sale_price && $product->sale_price > 0 ? $product->sale_price : $product->price }};
+                
+                console.log('📋 Regras de desconto:', quantityDiscountRules);
+                console.log('💵 Preço base:', basePrice);
+                
+                // Mostrar detalhes das regras
+                quantityDiscountRules.forEach((rule, index) => {
+                    console.log(`📝 Regra ${index + 1}:`, {
+                        quantidadeMinima: rule.min_quantity,
+                        percentualDesconto: rule.discount_percentage + '%'
+                    });
+                });
+                
+                // Ordenar regras por quantidade mínima (decrescente)
+                quantityDiscountRules.sort((a, b) => b.min_quantity - a.min_quantity);
+                
+                // Encontrar a regra aplicável
+                for (const rule of quantityDiscountRules) {
+                    if (quantity >= rule.min_quantity) {
+                        const discountAmount = basePrice * (rule.discount_percentage / 100);
+                        this.discountedPrice = basePrice - discountAmount;
+                        this.discountPercentage = rule.discount_percentage;
+                        this.savings = discountAmount;
+                        this.quantity = quantity;
+                        console.log('✅ Desconto aplicado:', {
+                            quantidade: quantity,
+                            regra: rule,
+                            precoOriginal: basePrice,
+                            precoComDesconto: this.discountedPrice,
+                            economia: this.savings
+                        });
+                        return;
+                    }
+                }
+                
+                // Nenhuma regra aplicável
+                this.discountedPrice = 0;
+                this.discountPercentage = 0;
+                this.savings = 0;
+                this.quantity = quantity;
+                console.log('❌ Nenhuma regra aplicável para quantidade:', quantity);
+            @endif
+        },
+        
+        formatPrice(price) {
+            return new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(price);
         }
     }
 }

@@ -420,26 +420,42 @@
                     <div class="flex-1 min-w-0">
                                 <h3 class="font-medium text-gray-900 truncate mb-1" x-text="item.name"></h3>
                         <p class="text-sm text-gray-500 mb-2" x-text="item.description"></p>
-                                <p class="font-bold text-red-600" x-text="formatPrice(item.price * item.quantity)"></p>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <p class="font-bold text-red-600" x-text="formatPrice(item.price * item.quantity)"></p>
+                                    <span x-show="item.quantity_discount_applied" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="bi bi-percent mr-1"></i>
+                                        Desconto
+                                    </span>
+                                </div>
                                 <p class="text-xs text-gray-500" x-show="item.quantity > 1">
                                     <span x-text="item.quantity"></span>x <span x-text="formatPrice(item.price)"></span>
+                                </p>
+                                <p x-show="item.quantity_discount_applied" class="text-xs text-green-600 font-medium">
+                                    <i class="bi bi-check-circle mr-1"></i>
+                                    Desconto aplicado
                                 </p>
                     </div>
                             
                     <div class="flex flex-col items-end space-y-2">
                         <div class="flex items-center space-x-2">
                             <button @click="updateQuantity(item.id, item.quantity - 1)" 
-                                            class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50">
+                                            class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors">
                                 <i class="bi bi-dash text-sm"></i>
                             </button>
-                            <span class="w-8 text-center text-sm font-medium" x-text="item.quantity"></span>
+                            <input type="number" 
+                                   :value="item.quantity"
+                                   @input="handleQuantityInput(item.id, $event)"
+                                   @blur="validateQuantityInput(item.id, $event)"
+                                   min="1" 
+                                   max="999"
+                                   class="w-12 text-center text-sm font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                             <button @click="updateQuantity(item.id, item.quantity + 1)" 
-                                            class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50">
+                                            class="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-50 transition-colors">
                                 <i class="bi bi-plus text-sm"></i>
                             </button>
                         </div>
                                 <button @click="removeItem(item.id)" 
-                                        class="w-8 h-8 rounded-full border border-red-300 text-red-600 flex items-center justify-center hover:bg-red-50">
+                                        class="w-8 h-8 rounded-full border border-red-300 text-red-600 flex items-center justify-center hover:bg-red-50 transition-colors">
                             <i class="bi bi-trash text-sm"></i>
                         </button>
                     </div>
@@ -447,6 +463,24 @@
             </template>
         </div>
     </div>
+
+            {{-- Banner de Economia --}}
+            <div x-show="cartItems.length > 0 && getTotalSavings() > 0" class="px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="bi bi-piggy-bank text-lg text-green-600 mr-2"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-green-800">Você está economizando</p>
+                            <p class="text-xs text-green-600">Descontos por quantidade</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-green-600">
+                            R$ <span x-text="formatPrice(getTotalSavings())"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {{-- Footer --}}
             <div x-show="cartItems.length > 0" class="border-t p-4 bg-white shadow-lg">
@@ -518,7 +552,7 @@ function storeHeader() {
                 return;
             }
             
-            const maxQuantity = 99; // Define um limite máximo de itens
+            const maxQuantity = 999; // Define um limite máximo de itens
             newQuantity = Math.min(newQuantity, maxQuantity); // Limita a quantidade máxima
             
             const item = this.cartItems.find(item => item.id === productId);
@@ -527,6 +561,30 @@ function storeHeader() {
                 this.cartItems = [...this.cartItems]; // Força o rerender do Alpine
                 this.saveCart();
             }
+        },
+        
+        handleQuantityInput(productId, event) {
+            const value = parseInt(event.target.value);
+            
+            // Apenas atualiza se for um número válido
+            if (!isNaN(value) && value >= 1) {
+                this.updateQuantity(productId, Math.min(value, 999));
+            }
+        },
+        
+        validateQuantityInput(productId, event) {
+            let value = parseInt(event.target.value);
+            
+            // Validar e corrigir o valor
+            if (isNaN(value) || value < 1) {
+                value = 1;
+            } else if (value > 999) {
+                value = 999;
+            }
+            
+            // Atualizar o input com o valor corrigido
+            event.target.value = value;
+            this.updateQuantity(productId, value);
         },
         
         removeItem(productId) {
@@ -622,6 +680,22 @@ function storeHeader() {
                 const price = parseFloat(item.price) || 0;
                 return sum + (price * item.quantity);
             }, 0);
+        },
+        
+        getTotalSavings() {
+            console.log('🔍 Calculando economia total. Itens no carrinho:', this.cartItems);
+            const savings = this.cartItems.reduce((total, item) => {
+                console.log('🔍 Item:', item);
+                if (item.quantity_discount_applied && item.base_price && item.unit_price) {
+                    const savingsPerUnit = parseFloat(item.base_price) - parseFloat(item.unit_price);
+                    const totalSavings = savingsPerUnit * item.quantity;
+                    console.log('💰 Economia do item:', totalSavings);
+                    return total + totalSavings;
+                }
+                return total;
+            }, 0);
+            console.log('💰 Economia total:', savings);
+            return savings;
         },
             
         // Helpers

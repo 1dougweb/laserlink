@@ -239,6 +239,10 @@ class AdminController extends Controller
                 'short_description' => 'nullable|string',
                 'price' => 'required|numeric|min:0',
                 'sale_price' => 'nullable|numeric|min:0',
+            'quantity_discount_enabled' => 'boolean',
+            'quantity_discount_rules' => 'nullable|string',
+            'whatsapp_quote_enabled' => 'boolean',
+            'whatsapp_quote_text' => 'nullable|string|max:500',
                 'sku' => 'required|string|unique:products,sku',
                 'stock_quantity' => 'required|integer|min:0',
                 'is_active' => 'boolean',
@@ -282,6 +286,23 @@ class AdminController extends Controller
             // Garantir que is_active e is_featured sejam booleanos
             $validated['is_active'] = $request->has('is_active');
             $validated['is_featured'] = $request->has('is_featured');
+            $validated['quantity_discount_enabled'] = $request->has('quantity_discount_enabled');
+            
+            // Processar regras de desconto por quantidade
+            if ($request->filled('quantity_discount_rules')) {
+                $rules = json_decode($request->quantity_discount_rules, true);
+                if (is_array($rules)) {
+                    // Validar e limpar regras
+                    $validated['quantity_discount_rules'] = array_filter($rules, function($rule) {
+                        return isset($rule['min_quantity']) && isset($rule['discount_percentage']) &&
+                               $rule['min_quantity'] > 0 && $rule['discount_percentage'] >= 0 && $rule['discount_percentage'] <= 100;
+                    });
+                } else {
+                    $validated['quantity_discount_rules'] = null;
+                }
+            } else {
+                $validated['quantity_discount_rules'] = null;
+            }
             
             // Remover 'categories' antes de criar (será tratado depois)
             $categories = $validated['categories'];
@@ -366,6 +387,10 @@ class AdminController extends Controller
                 'short_description' => 'nullable|string',
                 'price' => 'required|numeric|min:0',
                 'sale_price' => 'nullable|numeric|min:0',
+            'quantity_discount_enabled' => 'boolean',
+            'quantity_discount_rules' => 'nullable|string',
+            'whatsapp_quote_enabled' => 'boolean',
+            'whatsapp_quote_text' => 'nullable|string|max:500',
                 'sku' => 'required|string|unique:products,sku,' . $product->id,
                 'stock_quantity' => 'required|integer|min:0',
                 'is_active' => 'boolean',
@@ -403,6 +428,23 @@ class AdminController extends Controller
             // Garantir que is_active e is_featured sejam booleanos
             $validated['is_active'] = $request->has('is_active');
             $validated['is_featured'] = $request->has('is_featured');
+            $validated['quantity_discount_enabled'] = $request->has('quantity_discount_enabled');
+            
+            // Processar regras de desconto por quantidade
+            if ($request->filled('quantity_discount_rules')) {
+                $rules = json_decode($request->quantity_discount_rules, true);
+                if (is_array($rules)) {
+                    // Validar e limpar regras
+                    $validated['quantity_discount_rules'] = array_filter($rules, function($rule) {
+                        return isset($rule['min_quantity']) && isset($rule['discount_percentage']) &&
+                               $rule['min_quantity'] > 0 && $rule['discount_percentage'] >= 0 && $rule['discount_percentage'] <= 100;
+                    });
+                } else {
+                    $validated['quantity_discount_rules'] = null;
+                }
+            } else {
+                $validated['quantity_discount_rules'] = null;
+            }
             
             // Usar a primeira categoria como category_id principal (se houver)
             if (isset($validated['category_id']) && is_array($validated['category_id']) && count($validated['category_id']) > 0) {
@@ -463,11 +505,103 @@ class AdminController extends Controller
             ->with('success', "Produto {$status} com sucesso!");
     }
 
+    public function duplicateProduct(Product $product)
+    {
+        try {
+            // Criar uma cópia do produto
+            $newProduct = $product->replicate();
+            
+            // Modificar alguns campos para evitar conflitos
+            $newProduct->name = $product->name . ' (Cópia)';
+            $newProduct->is_active = false; // Criar como inativo por segurança
+            
+            // Gerar novo slug único
+            $baseSlug = Str::slug($newProduct->name);
+            $slug = $baseSlug;
+            $count = 1;
+            
+            while (Product::where('slug', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $count;
+                $count++;
+            }
+            
+            $newProduct->slug = $slug;
+            
+            // Gerar novo SKU único
+            $lastProduct = Product::orderBy('id', 'desc')->first();
+            $lastSkuNumber = 1;
+            
+            if ($lastProduct && $lastProduct->sku) {
+                if (preg_match('/(\d+)/', $lastProduct->sku, $matches)) {
+                    $lastSkuNumber = (int) $matches[1] + 1;
+                }
+            }
+            
+            $newProduct->sku = 'LSK-' . str_pad($lastSkuNumber, 7, '0', STR_PAD_LEFT);
+            
+            // Zerar estatísticas
+            $newProduct->rating_average = 0;
+            $newProduct->rating_count = 0;
+            
+            $newProduct->save();
+            
+            // Duplicar campos extras se existirem
+            if ($product->extraFields()->exists()) {
+                foreach ($product->extraFields as $extraField) {
+                    $newProduct->extraFields()->attach($extraField->id, [
+                        'is_required' => $extraField->pivot->is_required,
+                        'sort_order' => $extraField->pivot->sort_order,
+                        'field_settings' => $extraField->pivot->field_settings,
+                    ]);
+                }
+            }
+            
+            // Duplicar campos de fórmula se existirem
+            if ($product->formulaFields()->exists()) {
+                foreach ($product->formulaFields as $formulaField) {
+                    $newProduct->formulaFields()->attach($formulaField->id, [
+                        'is_required' => $formulaField->pivot->is_required,
+                        'sort_order' => $formulaField->pivot->sort_order,
+                        'field_settings' => $formulaField->pivot->field_settings,
+                    ]);
+                }
+            }
+            
+            return redirect()->route('admin.products.edit', $newProduct)
+                ->with('success', 'Produto duplicado com sucesso! Revise as informações e ative quando estiver pronto.');
+                
+        } catch (\Exception $e) {
+            Log::error('Erro ao duplicar produto: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Erro ao duplicar produto: ' . $e->getMessage());
+        }
+    }
+
     public function deleteProduct(Product $product)
     {
         $product->delete();
         return redirect()->route('admin.products')
             ->with('success', 'Produto excluído com sucesso!');
+    }
+
+    public function deleteMultipleProducts(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'product_ids' => 'required|array|min:1',
+                'product_ids.*' => 'exists:products,id'
+            ]);
+
+            $count = Product::whereIn('id', $validated['product_ids'])->delete();
+
+            return redirect()->route('admin.products')
+                ->with('success', "{$count} produto(s) excluído(s) com sucesso!");
+                
+        } catch (\Exception $e) {
+            Log::error('Erro ao excluir múltiplos produtos: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Erro ao excluir produtos: ' . $e->getMessage());
+        }
     }
 
     public function orders()
@@ -1624,7 +1758,8 @@ class AdminController extends Controller
             'home_banners_mobile',
             'home_categories',
             'contact_map_embed_url',
-            'contact_faq'
+            'contact_faq',
+            'delivery_time_text'
         ])->pluck('value', 'key')->toArray();
 
         // Valores padrão
@@ -1637,7 +1772,8 @@ class AdminController extends Controller
             'home_banners_mobile' => '[]',
             'home_categories' => '[]',
             'contact_map_embed_url' => '',
-            'contact_faq' => '[]'
+            'contact_faq' => '[]',
+            'delivery_time_text' => 'O prazo de entrega é de até 5 dias úteis'
         ];
 
         $settings = array_merge($defaultSettings, $settings);
@@ -1669,6 +1805,7 @@ class AdminController extends Controller
             'home_categories_json' => 'nullable|string',
             'contact_map_embed_url' => 'nullable|string|max:1000',
             'contact_faq_json' => 'nullable|string',
+            'delivery_time_text' => 'nullable|string|max:500',
             'menu_items' => 'array',
             'menu_items.*.name' => 'required|string|max:255',
             'menu_items.*.url' => 'required|string|max:500',
@@ -1681,7 +1818,7 @@ class AdminController extends Controller
         $validated['store_bottom_menu_enabled'] = filter_var($validated['store_bottom_menu_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         // Salvar configurações gerais
-        foreach (['store_bottom_menu_enabled', 'store_menu_style', 'store_menu_position', 'contact_map_embed_url'] as $key) {
+        foreach (['store_bottom_menu_enabled', 'store_menu_style', 'store_menu_position', 'contact_map_embed_url', 'delivery_time_text'] as $key) {
             if (isset($validated[$key])) {
                 Setting::updateOrCreate(['key' => $key], ['value' => $validated[$key]]);
             }

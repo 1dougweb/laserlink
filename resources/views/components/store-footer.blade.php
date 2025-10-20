@@ -271,7 +271,7 @@
 
         <!-- WhatsApp Flutuante -->
         @if($whatsappNumber)
-            <div class="fixed bottom-6 md:bottom-6 right-6 z-50 transition-all duration-300" style="bottom: calc(4rem + 64px);">
+            <div class="fixed bottom-6 md:bottom-6 right-6 z-40 transition-all duration-300" style="bottom: calc(4rem + 64px);">
                 <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $whatsappNumber) }}" 
                    target="_blank"
                    class="z-998 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95">
